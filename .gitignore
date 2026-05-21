@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables (NEVER commit these)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Debug / test files
+debug_trigger.ts
+e2e_test.ts
+test_auth.ts
+test_db.ts
+test_rls.ts
+
+# Logs
+*.log
+npm-debug.log*

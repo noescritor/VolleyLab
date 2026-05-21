@@ -1,0 +1,407 @@
+import { supabase } from './supabase/globalClient';
+import { projectId, publicAnonKey } from './supabase/info';
+import { UUID } from './match-types';
+
+const supabaseUrl = `https://${projectId}.supabase.co`;
+
+class SupabaseService {
+  // Exposed publicly so AppContext can use it directly when needed
+  public supabase = supabase;
+
+  // Authentication & Context
+  async getCurrentUser() {
+    const { data: { user } } = await this.supabase.auth.getUser();
+    return user;
+  }
+
+  async getUserOrg(): Promise<UUID | null> {
+    const storedOrgId = typeof window !== 'undefined' ? localStorage.getItem('currentOrgId') : null;
+    if (storedOrgId) return storedOrgId;
+
+    const user = await this.getCurrentUser();
+    if (!user) return null;
+
+    const { data } = await this.supabase
+      .from('org_members')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .eq('activo', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (data?.org_id && typeof window !== 'undefined') {
+      localStorage.setItem('currentOrgId', data.org_id);
+    }
+
+    return data?.org_id || null;
+  }
+
+  async getUserOrgs(): Promise<any[]> {
+    const user = await this.getCurrentUser();
+    if (!user) return [];
+
+    const { data } = await this.supabase
+      .from('org_members')
+      .select('org_id, rol, orgs(nombre, logo_url)')
+      .eq('user_id', user.id)
+      .eq('activo', true);
+
+    return data || [];
+  }
+
+  // ==========================================
+  // DOMAIN: TEAMS
+  // ==========================================
+  async getTeams(sportType: string = 'volleyball') {
+    const orgId = await this.getUserOrg();
+    if (!orgId) return [];
+
+    const { data, error } = await this.supabase
+      .from('teams')
+      .select('*')
+      .eq('org_id', orgId)
+      .eq('sport_type', sportType)
+      .order('name');
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async createTeam(teamData: any) {
+    const orgId = await this.getUserOrg();
+    if (!orgId) throw new Error('User not associated with any organization');
+
+    const { data, error } = await this.supabase
+      .from('teams')
+      .insert({ ...teamData, org_id: orgId })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async ensureDefaultTeam() {
+    const orgId = await this.getUserOrg();
+    if (!orgId) return null;
+    const teams = await this.getTeams();
+    if (teams.length > 0) return teams[0];
+
+    const { data, error } = await this.supabase
+      .from('teams')
+      .insert({
+        org_id: orgId,
+        sport_type: 'volleyball',
+        name: 'Equipo Principal',
+        category: 'Primera División',
+        gender: 'Mixed'
+      })
+      .select()
+      .single();
+
+    if (error) { console.error('Could not create default team:', error.message); return null; }
+    console.log('✅ Default team created:', data.id);
+    return data;
+  }
+
+  // ==========================================
+  // DOMAIN: PLAYERS & ROSTER
+  // ==========================================
+  async getPlayers() {
+    const orgId = await this.getUserOrg();
+    if (!orgId) return [];
+
+    const { data, error } = await this.supabase
+      .from('club_roster')
+      .select(`
+        *,
+        global_players(*)
+      `)
+      .eq('org_id', orgId)
+      .eq('status', 'active');
+
+    if (error) throw error;
+    
+    return (data || []).map(item => ({
+      ...item.global_players,
+      roster_id: item.id,
+      number: item.number,
+      position: item.position,
+      team_id: item.team_id,
+      sport_metadata: item.sport_metadata
+    }));
+  }
+
+  async getPlayersByTeam(teamId: UUID) {
+    const { data, error } = await this.supabase
+      .from('club_roster')
+      .select(`
+        *,
+        global_players(*)
+      `)
+      .eq('team_id', teamId)
+      .eq('status', 'active');
+
+    if (error) throw error;
+    
+    return (data || []).map(item => ({
+      ...item.global_players,
+      roster_id: item.id,
+      number: item.number,
+      position: item.position,
+      sport_metadata: item.sport_metadata
+    }));
+  }
+
+  async addPlayerToRoster(athleteId: string, rosterData: any) {
+    const orgId = await this.getUserOrg();
+    if (!orgId) throw new Error('No org context');
+
+    // Find the player in global_players
+    const { data: player, error: playerError } = await this.supabase
+      .from('global_players')
+      .select('id')
+      .eq('global_athlete_id', athleteId)
+      .single();
+
+    if (playerError || !player) throw new Error('Jugador no encontrado con ese ID');
+
+    const { data, error } = await this.supabase
+      .from('club_roster')
+      .upsert({ 
+        org_id: orgId,
+        player_id: player.id,
+        status: 'active',
+        ...rosterData 
+      }, { onConflict: 'org_id, player_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async createGhostPlayer(playerData: any, rosterData: any) {
+    const orgId = await this.getUserOrg();
+    if (!orgId) throw new Error('No org context');
+
+    // 1. Create Ghost Profile
+    const { data: ghostPlayer, error: gpError } = await this.supabase
+      .from('global_players')
+      .insert({
+        name: playerData.name,
+        height_cm: playerData.height_cm,
+        weight_kg: playerData.weight_kg,
+        global_athlete_id: `VLL-GHOST-${Math.floor(Math.random()*10000)}` // Temporary ghost ID
+      })
+      .select()
+      .single();
+
+    if (gpError || !ghostPlayer) throw gpError;
+
+    // 2. Add to Roster
+    const { data: roster, error: rosterError } = await this.supabase
+      .from('club_roster')
+      .insert({
+        org_id: orgId,
+        player_id: ghostPlayer.id,
+        status: 'active',
+        ...rosterData
+      })
+      .select()
+      .single();
+
+    if (rosterError) throw rosterError;
+
+    return { ...ghostPlayer, roster_id: roster.id, ...rosterData };
+  }
+
+  async updatePlayer(playerId: string, playerData: any, rosterData: any) {
+    const orgId = await this.getUserOrg();
+    
+    // Update global physical stats (only if owner or ghost profile... ideally RLS handles this, but for now we just attempt it)
+    if (Object.keys(playerData).length > 0) {
+      await this.supabase.from('global_players').update(playerData).eq('id', playerId);
+    }
+    
+    // Update club roster info
+    if (Object.keys(rosterData).length > 0) {
+      await this.supabase.from('club_roster')
+        .update(rosterData)
+        .eq('player_id', playerId)
+        .eq('org_id', orgId);
+    }
+  }
+
+  async removePlayerFromRoster(playerId: string) {
+    const orgId = await this.getUserOrg();
+    await this.supabase.from('club_roster')
+      .update({ status: 'transferred' })
+      .eq('player_id', playerId)
+      .eq('org_id', orgId);
+  }
+
+  // ==========================================
+  // GAME ANALYTICS (Agnostic Structure)
+  // ==========================================
+  async getMatches(sportType: string = 'volleyball') {
+    const orgId = await this.getUserOrg();
+    if (!orgId) return [];
+
+    const { data, error } = await this.supabase
+      .from('matches')
+      .select(`
+        *,
+        teams(name)
+      `)
+      .eq('org_id', orgId)
+      .eq('sport_type', sportType)
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async createMatch(matchData: any) {
+    const orgId = await this.getUserOrg();
+    if (!orgId) throw new Error('No org context');
+
+    const { data, error } = await this.supabase
+      .from('matches')
+      .insert({ ...matchData, org_id: orgId })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateMatch(matchId: string, matchData: any) {
+    const orgId = await this.getUserOrg();
+    const { data, error } = await this.supabase
+      .from('matches')
+      .update(matchData)
+      .eq('id', matchId)
+      .eq('org_id', orgId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async deleteMatch(matchId: string) {
+    const orgId = await this.getUserOrg();
+    const { error } = await this.supabase
+      .from('matches')
+      .delete()
+      .eq('id', matchId)
+      .eq('org_id', orgId);
+
+    if (error) throw error;
+  }
+
+  async getMatchWithDetails(matchId: UUID) {
+    // Nested query adapted to agnostic structure
+    const { data, error } = await this.supabase
+      .from('matches')
+      .select(`
+        *,
+        teams(*),
+        match_segments(
+          *,
+          match_subsegments(
+            *,
+            actions(*)
+          )
+        )
+      `)
+      .eq('id', matchId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // ==========================================
+  // PHYSICAL TESTS & LOADS (Source Tracking)
+  // ==========================================
+  async getPhysicalTests(playerId?: UUID) {
+    const orgId = await this.getUserOrg();
+    if (!orgId) return [];
+
+    // Filter to only show tests visible to the club
+    let query = this.supabase
+      .from('player_tests')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('date', { ascending: false });
+
+    if (playerId) {
+      query = query.eq('player_id', playerId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
+
+  async createPhysicalTest(testData: any) {
+    const orgId = await this.getUserOrg();
+    const user = await this.getCurrentUser();
+    if (!orgId || !user) throw new Error('Missing auth context');
+
+    const { data, error } = await this.supabase
+      .from('player_tests')
+      .insert({ 
+        ...testData, 
+        org_id: orgId,
+        source: 'official_coach',
+        created_by: user.id
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updatePhysicalTest(testId: string, testData: any) {
+    const orgId = await this.getUserOrg();
+    const { data, error } = await this.supabase
+      .from('player_tests')
+      .update(testData)
+      .eq('id', testId)
+      .eq('org_id', orgId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  async deletePhysicalTest(testId: string) {
+    const orgId = await this.getUserOrg();
+    const { error } = await this.supabase
+      .from('player_tests')
+      .delete()
+      .eq('id', testId)
+      .eq('org_id', orgId);
+    if (error) throw error;
+  }
+
+  // Real-time subscriptions
+  subscribeToMatch(matchId: UUID, callback: (payload: any) => void) {
+    return this.supabase
+      .channel(`match-${matchId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'actions',
+        filter: `match_id=eq.${matchId}`
+      }, callback)
+      .subscribe();
+  }
+}
+
+export const supabaseService = new SupabaseService();
+export default supabaseService;

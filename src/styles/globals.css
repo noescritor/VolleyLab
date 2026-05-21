@@ -1,0 +1,260 @@
+@custom-variant dark (&:is(.dark *));
+
+/* =====================================================
+   VOLLEYLAB DESIGN SYSTEM — Dark Native
+   Base: Moodboard Kit 3.0 + Volleyball position layer
+   ===================================================== */
+
+:root {
+  /* --- Typography --- */
+  --font-size: 14px;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'DM Mono', 'Courier New', monospace;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* --- Backgrounds --- */
+  --background:  #000000;
+  --card:        #0d0d0d;
+  --popover:     #0d0d0d;
+  --elevated:    #1a1a1a;
+
+  /* --- Foregrounds --- */
+  --foreground:            rgba(255, 255, 255, 1.00);
+  --card-foreground:       rgba(255, 255, 255, 1.00);
+  --popover-foreground:    rgba(255, 255, 255, 1.00);
+  --foreground-secondary:  rgba(255, 255, 255, 0.60);
+  --foreground-tertiary:   rgba(255, 255, 255, 0.40);
+  --foreground-muted:      rgba(255, 255, 255, 0.25);
+  --foreground-placeholder:rgba(255, 255, 255, 0.20);
+  --foreground-subtle:     rgba(255, 255, 255, 0.15);
+
+  /* --- Accent palette --- */
+  --primary:          #A191FF;
+  --primary-foreground: #000000;
+  --accent-blue:      #91CAFF;
+  --accent-green:     #91FFB0;
+  --accent-yellow:    #FFD391;
+  --accent-red:       #FF919F;
+  --accent-purple:    #DC91FF;
+
+  /* --- Semantic states --- */
+  --success:              #91FFB0;
+  --success-foreground:   #000000;
+  --success-bg:           rgba(145, 255, 176, 0.08);
+  --warning:              #FFD391;
+  --warning-foreground:   #000000;
+  --warning-bg:           rgba(255, 211, 145, 0.08);
+  --destructive:          #FF919F;
+  --destructive-foreground: #000000;
+  --destructive-bg:       rgba(255, 145, 159, 0.08);
+
+  /* --- Shadcn/ui semantic aliases --- */
+  --secondary:            rgba(255, 255, 255, 0.08);
+  --secondary-foreground: rgba(255, 255, 255, 0.60);
+  --muted:                rgba(255, 255, 255, 0.04);
+  --muted-foreground:     rgba(255, 255, 255, 0.40);
+  --accent:               rgba(255, 255, 255, 0.04);
+  --accent-foreground:    rgba(255, 255, 255, 1.00);
+
+  /* --- Borders --- */
+  --border:       rgba(255, 255, 255, 0.08);
+  --border-soft:  rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.20);
+
+  /* --- Interactive states --- */
+  --hover-bg:  rgba(255, 255, 255, 0.04);
+  --active-bg: rgba(255, 255, 255, 0.08);
+
+  /* --- Inputs --- */
+  --input:            rgba(255, 255, 255, 0.04);
+  --input-background: rgba(255, 255, 255, 0.04);
+  --switch-background: rgba(255, 255, 255, 0.20);
+  --ring:             rgba(161, 145, 255, 0.50);
+
+  /* --- Border radius --- */
+  --radius: 0.5rem; /* 8px — panel/modal/card */
+
+  /* --- Volleyball position colors --- */
+  --pos-punta:        #A191FF;
+  --pos-punta-bg:     rgba(161, 145, 255, 0.08);
+  --pos-opuesto:      #91CAFF;
+  --pos-opuesto-bg:   rgba(145, 202, 255, 0.08);
+  --pos-central:      #91FFB0;
+  --pos-central-bg:   rgba(145, 255, 176, 0.08);
+  --pos-colocador:    #FFD391;
+  --pos-colocador-bg: rgba(255, 211, 145, 0.08);
+  --pos-libero:       #FF919F;
+  --pos-libero-bg:    rgba(255, 145, 159, 0.08);
+  --pos-segundo:      #DC91FF;
+  --pos-segundo-bg:   rgba(220, 145, 255, 0.08);
+
+  /* --- Chart colors (aligned with accent palette) --- */
+  --chart-1: #A191FF;
+  --chart-2: #91CAFF;
+  --chart-3: #91FFB0;
+  --chart-4: #FFD391;
+  --chart-5: #FF919F;
+  --chart-6: #DC91FF;
+
+  /* --- Sidebar --- */
+  --sidebar:                    #0d0d0d;
+  --sidebar-foreground:         rgba(255, 255, 255, 1.00);
+  --sidebar-primary:            #A191FF;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent:             rgba(255, 255, 255, 0.04);
+  --sidebar-accent-foreground:  rgba(255, 255, 255, 0.60);
+  --sidebar-border:             rgba(255, 255, 255, 0.08);
+  --sidebar-ring:               rgba(161, 145, 255, 0.50);
+
+  /* --- Neutral scale (compatibility) --- */
+  --neutral-100: rgba(255, 255, 255, 0.04);
+  --neutral-300: rgba(255, 255, 255, 0.20);
+  --neutral-500: rgba(255, 255, 255, 0.40);
+  --neutral-700: rgba(255, 255, 255, 0.60);
+  --neutral-900: rgba(255, 255, 255, 1.00);
+}
+
+/* Dark class mirrors root — dark is always on in VolleyLab */
+.dark {
+  --background:         #000000;
+  --card:               #0d0d0d;
+  --popover:            #0d0d0d;
+  --foreground:         rgba(255, 255, 255, 1.00);
+  --card-foreground:    rgba(255, 255, 255, 1.00);
+  --popover-foreground: rgba(255, 255, 255, 1.00);
+  --primary:            #A191FF;
+  --primary-foreground: #000000;
+  --secondary:          rgba(255, 255, 255, 0.08);
+  --secondary-foreground: rgba(255, 255, 255, 0.60);
+  --muted:              rgba(255, 255, 255, 0.04);
+  --muted-foreground:   rgba(255, 255, 255, 0.40);
+  --accent:             rgba(255, 255, 255, 0.04);
+  --accent-foreground:  rgba(255, 255, 255, 1.00);
+  --destructive:        #FF919F;
+  --destructive-foreground: #000000;
+  --success:            #91FFB0;
+  --warning:            #FFD391;
+  --border:             rgba(255, 255, 255, 0.08);
+  --input:              rgba(255, 255, 255, 0.04);
+  --input-background:   rgba(255, 255, 255, 0.04);
+  --ring:               rgba(161, 145, 255, 0.50);
+  --chart-1: #A191FF;
+  --chart-2: #91CAFF;
+  --chart-3: #91FFB0;
+  --chart-4: #FFD391;
+  --chart-5: #FF919F;
+  --chart-6: #DC91FF;
+  --sidebar:                    #0d0d0d;
+  --sidebar-foreground:         rgba(255, 255, 255, 1.00);
+  --sidebar-primary:            #A191FF;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent:             rgba(255, 255, 255, 0.04);
+  --sidebar-accent-foreground:  rgba(255, 255, 255, 0.60);
+  --sidebar-border:             rgba(255, 255, 255, 0.08);
+  --sidebar-ring:               rgba(161, 145, 255, 0.50);
+}
+
+@theme inline {
+  --color-background:         var(--background);
+  --color-foreground:         var(--foreground);
+  --color-card:               var(--card);
+  --color-card-foreground:    var(--card-foreground);
+  --color-popover:            var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary:            var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary:          var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:              var(--muted);
+  --color-muted-foreground:   var(--muted-foreground);
+  --color-accent:             var(--accent);
+  --color-accent-foreground:  var(--accent-foreground);
+  --color-destructive:        var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success:            var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning:            var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border:             var(--border);
+  --color-input:              var(--input);
+  --color-input-background:   var(--input-background);
+  --color-switch-background:  var(--switch-background);
+  --color-ring:               var(--ring);
+  --color-chart-1:  var(--chart-1);
+  --color-chart-2:  var(--chart-2);
+  --color-chart-3:  var(--chart-3);
+  --color-chart-4:  var(--chart-4);
+  --color-chart-5:  var(--chart-5);
+  --color-chart-6:  var(--chart-6);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar:                    var(--sidebar);
+  --color-sidebar-foreground:         var(--sidebar-foreground);
+  --color-sidebar-primary:            var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent:             var(--sidebar-accent);
+  --color-sidebar-accent-foreground:  var(--sidebar-accent-foreground);
+  --color-sidebar-border:             var(--sidebar-border);
+  --color-sidebar-ring:               var(--sidebar-ring);
+  /* Volleyball position colors as Tailwind utilities */
+  --color-pos-punta:     var(--pos-punta);
+  --color-pos-opuesto:   var(--pos-opuesto);
+  --color-pos-central:   var(--pos-central);
+  --color-pos-colocador: var(--pos-colocador);
+  --color-pos-libero:    var(--pos-libero);
+  --color-pos-segundo:   var(--pos-segundo);
+  /* Font families */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    font-size: var(--font-size);
+    color-scheme: dark;
+    background-color: #000000;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  /* text-label — DM Mono uppercase, for table headers, badges, field labels */
+  .text-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+  }
+
+  /* Volleyball position badge utility classes */
+  .pos-punta     { color: var(--pos-punta);     background-color: var(--pos-punta-bg); }
+  .pos-opuesto   { color: var(--pos-opuesto);   background-color: var(--pos-opuesto-bg); }
+  .pos-central   { color: var(--pos-central);   background-color: var(--pos-central-bg); }
+  .pos-colocador { color: var(--pos-colocador); background-color: var(--pos-colocador-bg); }
+  .pos-libero    { color: var(--pos-libero);    background-color: var(--pos-libero-bg); }
+  .pos-segundo   { color: var(--pos-segundo);   background-color: var(--pos-segundo-bg); }
+
+  /* Accent badge backgrounds */
+  .bg-accent-violet { background-color: rgba(161, 145, 255, 0.08); }
+  .bg-accent-blue   { background-color: rgba(145, 202, 255, 0.08); }
+  .bg-accent-green  { background-color: rgba(145, 255, 176, 0.08); }
+  .bg-accent-yellow { background-color: rgba(255, 211, 145, 0.08); }
+  .bg-accent-red    { background-color: rgba(255, 145, 159, 0.08); }
+  .bg-accent-purple { background-color: rgba(220, 145, 255, 0.08); }
+}
