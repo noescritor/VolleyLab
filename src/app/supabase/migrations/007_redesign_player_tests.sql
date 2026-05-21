@@ -10,7 +10,7 @@ DROP TABLE IF EXISTS player_tests CASCADE;
 CREATE TABLE player_tests (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id      UUID REFERENCES orgs(org_id) ON DELETE CASCADE NOT NULL,
-  player_id   UUID REFERENCES players(id) ON DELETE CASCADE NOT NULL,
+  player_id   UUID REFERENCES global_players(id) ON DELETE CASCADE NOT NULL,
   date        DATE NOT NULL,
   created_by  UUID REFERENCES auth.users(id),
   source      TEXT DEFAULT 'official_coach',

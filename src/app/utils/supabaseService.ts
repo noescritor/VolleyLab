@@ -341,9 +341,13 @@ class SupabaseService {
   }
 
   async createPhysicalTest(formData: any) {
+    console.log('[DEBUG] createPhysicalTest called with:', JSON.stringify(formData, null, 2));
+    
     const orgId = await this.getUserOrg();
     const user  = await this.getCurrentUser();
-    if (!orgId || !user) throw new Error('Sin contexto de autenticación');
+    console.log('[DEBUG] orgId:', orgId, '| userId:', user?.id);
+    
+    if (!orgId || !user) throw new Error(`Sin contexto: orgId=${orgId}, userId=${user?.id}`);
 
     const row = {
       org_id:        orgId,
@@ -352,22 +356,20 @@ class SupabaseService {
       created_by:    user.id,
       source:        'official_coach',
       notes:         formData.notes || null,
-      // Salto
       cmj:           formData.CMJ        ? parseFloat(formData.CMJ)        : null,
       sj:            formData.SJ         ? parseFloat(formData.SJ)         : null,
       abordaje:      formData.abordaje   ? parseFloat(formData.abordaje)   : null,
-      // Velocidad
       vel_5m:        formData.vel5m      ? parseFloat(formData.vel5m)      : null,
       vel_10m:       formData.vel10m     ? parseFloat(formData.vel10m)     : null,
       t_test:        formData.tTest      ? parseFloat(formData.tTest)      : null,
-      // Potencia
       spike_speed:   formData.spikeSpeed ? parseFloat(formData.spikeSpeed) : null,
       serve_speed:   formData.serveSpeed ? parseFloat(formData.serveSpeed) : null,
-      // Reacción / Movilidad
       reaction_time: formData.reactionTime ? parseFloat(formData.reactionTime) : null,
       shoulder_rom:  formData.shoulderROM  ? parseFloat(formData.shoulderROM)  : null,
       ankle_rom:     formData.ankleROM     ? parseFloat(formData.ankleROM)     : null,
     };
+
+    console.log('[DEBUG] Inserting row:', JSON.stringify(row, null, 2));
 
     const { data, error } = await this.supabase
       .from('player_tests')
@@ -375,7 +377,12 @@ class SupabaseService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[DEBUG] Supabase insert error:', JSON.stringify(error, null, 2));
+      throw new Error(`Supabase: ${error.message} (code: ${error.code}, details: ${error.details})`);
+    }
+    
+    console.log('[DEBUG] Insert success:', data);
     return data;
   }
 
