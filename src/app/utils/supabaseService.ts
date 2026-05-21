@@ -323,42 +323,55 @@ class SupabaseService {
     return data;
   }
 
-  // ==========================================
-  // PHYSICAL TESTS & LOADS (Source Tracking)
-  // ==========================================
   async getPhysicalTests(playerId?: UUID) {
     const orgId = await this.getUserOrg();
     if (!orgId) return [];
 
-    // Filter to only show tests visible to the club
     let query = this.supabase
       .from('player_tests')
       .select('*')
       .eq('org_id', orgId)
       .order('date', { ascending: false });
 
-    if (playerId) {
-      query = query.eq('player_id', playerId);
-    }
+    if (playerId) query = query.eq('player_id', playerId);
 
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
   }
 
-  async createPhysicalTest(testData: any) {
+  async createPhysicalTest(formData: any) {
     const orgId = await this.getUserOrg();
-    const user = await this.getCurrentUser();
-    if (!orgId || !user) throw new Error('Missing auth context');
+    const user  = await this.getCurrentUser();
+    if (!orgId || !user) throw new Error('Sin contexto de autenticación');
+
+    const row = {
+      org_id:        orgId,
+      player_id:     formData.playerId,
+      date:          formData.date,
+      created_by:    user.id,
+      source:        'official_coach',
+      notes:         formData.notes || null,
+      // Salto
+      cmj:           formData.CMJ        ? parseFloat(formData.CMJ)        : null,
+      sj:            formData.SJ         ? parseFloat(formData.SJ)         : null,
+      abordaje:      formData.abordaje   ? parseFloat(formData.abordaje)   : null,
+      // Velocidad
+      vel_5m:        formData.vel5m      ? parseFloat(formData.vel5m)      : null,
+      vel_10m:       formData.vel10m     ? parseFloat(formData.vel10m)     : null,
+      t_test:        formData.tTest      ? parseFloat(formData.tTest)      : null,
+      // Potencia
+      spike_speed:   formData.spikeSpeed ? parseFloat(formData.spikeSpeed) : null,
+      serve_speed:   formData.serveSpeed ? parseFloat(formData.serveSpeed) : null,
+      // Reacción / Movilidad
+      reaction_time: formData.reactionTime ? parseFloat(formData.reactionTime) : null,
+      shoulder_rom:  formData.shoulderROM  ? parseFloat(formData.shoulderROM)  : null,
+      ankle_rom:     formData.ankleROM     ? parseFloat(formData.ankleROM)     : null,
+    };
 
     const { data, error } = await this.supabase
       .from('player_tests')
-      .insert({ 
-        ...testData, 
-        org_id: orgId,
-        source: 'official_coach',
-        created_by: user.id
-      })
+      .insert(row)
       .select()
       .single();
 
@@ -366,15 +379,33 @@ class SupabaseService {
     return data;
   }
 
-  async updatePhysicalTest(testId: string, testData: any) {
+  async updatePhysicalTest(testId: string, formData: any) {
     const orgId = await this.getUserOrg();
+    if (!orgId) throw new Error('Sin org');
+
+    const updates: any = { updated_at: new Date().toISOString() };
+    if (formData.date)          updates.date          = formData.date;
+    if (formData.notes !== undefined) updates.notes   = formData.notes;
+    if (formData.CMJ        !== undefined) updates.cmj           = formData.CMJ        ? parseFloat(formData.CMJ)        : null;
+    if (formData.SJ         !== undefined) updates.sj            = formData.SJ         ? parseFloat(formData.SJ)         : null;
+    if (formData.abordaje   !== undefined) updates.abordaje      = formData.abordaje   ? parseFloat(formData.abordaje)   : null;
+    if (formData.vel5m      !== undefined) updates.vel_5m        = formData.vel5m      ? parseFloat(formData.vel5m)      : null;
+    if (formData.vel10m     !== undefined) updates.vel_10m       = formData.vel10m     ? parseFloat(formData.vel10m)     : null;
+    if (formData.tTest      !== undefined) updates.t_test        = formData.tTest      ? parseFloat(formData.tTest)      : null;
+    if (formData.spikeSpeed !== undefined) updates.spike_speed   = formData.spikeSpeed ? parseFloat(formData.spikeSpeed) : null;
+    if (formData.serveSpeed !== undefined) updates.serve_speed   = formData.serveSpeed ? parseFloat(formData.serveSpeed) : null;
+    if (formData.reactionTime !== undefined) updates.reaction_time = formData.reactionTime ? parseFloat(formData.reactionTime) : null;
+    if (formData.shoulderROM  !== undefined) updates.shoulder_rom  = formData.shoulderROM  ? parseFloat(formData.shoulderROM)  : null;
+    if (formData.ankleROM     !== undefined) updates.ankle_rom     = formData.ankleROM     ? parseFloat(formData.ankleROM)     : null;
+
     const { data, error } = await this.supabase
       .from('player_tests')
-      .update(testData)
+      .update(updates)
       .eq('id', testId)
       .eq('org_id', orgId)
       .select()
       .single();
+
     if (error) throw error;
     return data;
   }

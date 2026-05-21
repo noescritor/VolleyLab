@@ -204,16 +204,29 @@ function convertSupabasePlayerToLegacy(sp: any): Player {
   };
 }
 
-function convertSupabaseTestToLegacy(supabaseTest: any): PhysicalTest {
+function convertSupabaseTestToLegacy(row: any): any {
   return {
-    id: supabaseTest.id,
-    playerId: supabaseTest.player_id,
-    testType: supabaseTest.test_type,
-    value: supabaseTest.value,
-    date: supabaseTest.date,
-    notes: supabaseTest.notes,
-    createdAt: supabaseTest.created_at,
-    updatedAt: supabaseTest.created_at // No updated_at in player_tests yet
+    id:           row.id,
+    playerId:     row.player_id,
+    date:         row.date,
+    notes:        row.notes,
+    // Salto
+    CMJ:          row.cmj,
+    SJ:           row.sj,
+    abordaje:     row.abordaje,
+    // Velocidad
+    vel5m:        row.vel_5m,
+    vel10m:       row.vel_10m,
+    tTest:        row.t_test,
+    // Potencia
+    spikeSpeed:   row.spike_speed,
+    serveSpeed:   row.serve_speed,
+    // Reacción / Movilidad
+    reactionTime: row.reaction_time,
+    shoulderROM:  row.shoulder_rom,
+    ankleROM:     row.ankle_rom,
+    createdAt:    row.created_at,
+    updatedAt:    row.updated_at || row.created_at,
   };
 }
 
@@ -511,49 +524,75 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const createPhysicalTest = async (testData: Omit<PhysicalTest, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const createPhysicalTest = async (formData: any) => {
     try {
       if (state.supabaseInitialized) {
-        const supabaseTest = await supabaseService.createPhysicalTest({
-          player_id: testData.playerId,
-          test_type: testData.testType,
-          value: testData.value,
-          unit: 'cm', // Default unit
-          date: testData.date,
-          notes: testData.notes
-        });
-        const legacyTest = convertSupabaseTestToLegacy(supabaseTest);
+        const row = await supabaseService.createPhysicalTest(formData);
+        // Mapear la fila de Supabase al formato del estado local
+        const legacyTest = {
+          id:           row.id,
+          playerId:     row.player_id,
+          date:         row.date,
+          notes:        row.notes,
+          // métricas
+          CMJ:          row.cmj,
+          SJ:           row.sj,
+          abordaje:     row.abordaje,
+          vel5m:        row.vel_5m,
+          vel10m:       row.vel_10m,
+          tTest:        row.t_test,
+          spikeSpeed:   row.spike_speed,
+          serveSpeed:   row.serve_speed,
+          reactionTime: row.reaction_time,
+          shoulderROM:  row.shoulder_rom,
+          ankleROM:     row.ankle_rom,
+          createdAt:    row.created_at,
+          updatedAt:    row.updated_at,
+        };
         dispatch({ type: 'ADD_PHYSICAL_TEST', test: legacyTest });
       } else {
-        const test = await apiService.createPhysicalTest(testData);
+        const test = await apiService.createPhysicalTest(formData);
         dispatch({ type: 'ADD_PHYSICAL_TEST', test });
       }
-      toast.success('Test físico registrado exitosamente');
-    } catch (error) {
+      toast.success('Test físico registrado');
+    } catch (error: any) {
       console.error('Error creating physical test:', error);
-      toast.error('Error al registrar test físico');
+      toast.error(`Error al registrar test: ${error.message || error}`);
     }
   };
 
-  const updatePhysicalTest = async (testId: string, testData: Partial<PhysicalTest>) => {
+  const updatePhysicalTest = async (testId: string, formData: any) => {
     try {
       if (state.supabaseInitialized) {
-        const supabaseData: any = {};
-        if (testData.testType) supabaseData.test_type = testData.testType;
-        if (testData.value !== undefined) supabaseData.value = testData.value;
-        if (testData.date) supabaseData.date = testData.date;
-        if (testData.notes !== undefined) supabaseData.notes = testData.notes;
-
-        const updatedTest = await supabaseService.updatePhysicalTest(testId, supabaseData);
-        dispatch({ type: 'UPDATE_PHYSICAL_TEST', test: convertSupabaseTestToLegacy(updatedTest) });
+        const row = await supabaseService.updatePhysicalTest(testId, formData);
+        const legacyTest = {
+          id:           row.id,
+          playerId:     row.player_id,
+          date:         row.date,
+          notes:        row.notes,
+          CMJ:          row.cmj,
+          SJ:           row.sj,
+          abordaje:     row.abordaje,
+          vel5m:        row.vel_5m,
+          vel10m:       row.vel_10m,
+          tTest:        row.t_test,
+          spikeSpeed:   row.spike_speed,
+          serveSpeed:   row.serve_speed,
+          reactionTime: row.reaction_time,
+          shoulderROM:  row.shoulder_rom,
+          ankleROM:     row.ankle_rom,
+          createdAt:    row.created_at,
+          updatedAt:    row.updated_at,
+        };
+        dispatch({ type: 'UPDATE_PHYSICAL_TEST', test: legacyTest });
       } else {
-        const test = await apiService.updatePhysicalTest(testId, testData);
+        const test = await apiService.updatePhysicalTest(testId, formData);
         dispatch({ type: 'UPDATE_PHYSICAL_TEST', test });
       }
-      toast.success('Test físico actualizado exitosamente');
-    } catch (error) {
+      toast.success('Test físico actualizado');
+    } catch (error: any) {
       console.error('Error updating physical test:', error);
-      toast.error('Error al actualizar test físico');
+      toast.error(`Error al actualizar test: ${error.message || error}`);
     }
   };
 
