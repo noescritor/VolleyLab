@@ -22,6 +22,7 @@ export function AuthPage() {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [name, setName]         = useState('');
+  const [orgName, setOrgName]   = useState('');
   const [loading, setLoading]   = useState(false);
   const navigate = useNavigate();
 
@@ -37,10 +38,15 @@ export function AuthPage() {
       } else {
         const { error } = await supabase.auth.signUp({
           email, password,
-          options: { data: { full_name: name } },
+          options: {
+            data: {
+              full_name: name,
+              org_name: orgName.trim() || `Club de ${name.trim() || email.split('@')[0]}`,
+            },
+          },
         });
         if (error) throw error;
-        toast.success('Registro exitoso. Revisa tu correo o ingresa directamente.');
+        toast.success('¡Cuenta creada! Tu organización está lista.');
         navigate('/');
       }
     } catch (error: any) {
@@ -175,14 +181,25 @@ export function AuthPage() {
           {/* Form */}
           <form onSubmit={handleAuth} className="space-y-4">
             {!isLogin && (
-              <div>
-                <label className={LABEL_CLS}>Nombre Completo</label>
-                <input
-                  type="text" value={name} onChange={e => setName(e.target.value)}
-                  placeholder="Tu nombre completo" required
-                  className={INPUT_CLS}
-                />
-              </div>
+              <>
+                <div>
+                  <label className={LABEL_CLS}>Nombre Completo</label>
+                  <input
+                    type="text" value={name} onChange={e => setName(e.target.value)}
+                    placeholder="Tu nombre completo" required
+                    className={INPUT_CLS}
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLS}>Nombre del Club / Organización</label>
+                  <input
+                    type="text" value={orgName} onChange={e => setOrgName(e.target.value)}
+                    placeholder="Ej: Club Voleibol Monterrey"
+                    className={INPUT_CLS}
+                  />
+                  <p className="text-[11px] text-white/25 mt-1.5 font-mono">Opcional · puedes cambiarlo después</p>
+                </div>
+              </>
             )}
 
             <div>
