@@ -15,105 +15,105 @@
   --font-weight-bold: 700;
 
   /* --- Backgrounds --- */
-  --background:  #000000;
-  --card:        #0d0d0d;
-  --popover:     #0d0d0d;
-  --elevated:    #1a1a1a;
+  --background:  #FFFFFF;
+  --card:        #F9FAFB;
+  --popover:     #FFFFFF;
+  --elevated:    #F3F4F6;
 
   /* --- Foregrounds --- */
-  --foreground:            rgba(255, 255, 255, 1.00);
-  --card-foreground:       rgba(255, 255, 255, 1.00);
-  --popover-foreground:    rgba(255, 255, 255, 1.00);
-  --foreground-secondary:  rgba(255, 255, 255, 0.60);
-  --foreground-tertiary:   rgba(255, 255, 255, 0.40);
-  --foreground-muted:      rgba(255, 255, 255, 0.25);
-  --foreground-placeholder:rgba(255, 255, 255, 0.20);
-  --foreground-subtle:     rgba(255, 255, 255, 0.15);
+  --foreground:            rgba(0, 0, 0, 1.00);
+  --card-foreground:       rgba(0, 0, 0, 1.00);
+  --popover-foreground:    rgba(0, 0, 0, 1.00);
+  --foreground-secondary:  rgba(0, 0, 0, 0.60);
+  --foreground-tertiary:   rgba(0, 0, 0, 0.40);
+  --foreground-muted:      rgba(0, 0, 0, 0.25);
+  --foreground-placeholder:rgba(0, 0, 0, 0.20);
+  --foreground-subtle:     rgba(0, 0, 0, 0.15);
 
-  /* --- Accent palette --- */
+  /* --- Accent palette (slightly adjusted for light mode contrast) --- */
   --primary:          #A191FF;
-  --primary-foreground: #000000;
-  --accent-blue:      #91CAFF;
-  --accent-green:     #91FFB0;
-  --accent-yellow:    #FFD391;
-  --accent-red:       #FF919F;
-  --accent-purple:    #DC91FF;
+  --primary-foreground: #FFFFFF;
+  --accent-blue:      #60A5FA;
+  --accent-green:     #34D399;
+  --accent-yellow:    #FBBF24;
+  --accent-red:       #F87171;
+  --accent-purple:    #C084FC;
 
   /* --- Semantic states --- */
-  --success:              #91FFB0;
-  --success-foreground:   #000000;
-  --success-bg:           rgba(145, 255, 176, 0.08);
-  --warning:              #FFD391;
-  --warning-foreground:   #000000;
-  --warning-bg:           rgba(255, 211, 145, 0.08);
-  --destructive:          #FF919F;
-  --destructive-foreground: #000000;
-  --destructive-bg:       rgba(255, 145, 159, 0.08);
+  --success:              #34D399;
+  --success-foreground:   #FFFFFF;
+  --success-bg:           rgba(52, 211, 153, 0.15);
+  --warning:              #FBBF24;
+  --warning-foreground:   #FFFFFF;
+  --warning-bg:           rgba(251, 191, 36, 0.15);
+  --destructive:          #F87171;
+  --destructive-foreground: #FFFFFF;
+  --destructive-bg:       rgba(248, 113, 113, 0.15);
 
   /* --- Shadcn/ui semantic aliases --- */
-  --secondary:            rgba(255, 255, 255, 0.08);
-  --secondary-foreground: rgba(255, 255, 255, 0.60);
-  --muted:                rgba(255, 255, 255, 0.04);
-  --muted-foreground:     rgba(255, 255, 255, 0.40);
-  --accent:               rgba(255, 255, 255, 0.04);
-  --accent-foreground:    rgba(255, 255, 255, 1.00);
+  --secondary:            rgba(0, 0, 0, 0.05);
+  --secondary-foreground: rgba(0, 0, 0, 0.60);
+  --muted:                rgba(0, 0, 0, 0.04);
+  --muted-foreground:     rgba(0, 0, 0, 0.40);
+  --accent:               rgba(0, 0, 0, 0.04);
+  --accent-foreground:    rgba(0, 0, 0, 1.00);
 
   /* --- Borders --- */
-  --border:       rgba(255, 255, 255, 0.08);
-  --border-soft:  rgba(255, 255, 255, 0.06);
-  --border-hover: rgba(255, 255, 255, 0.20);
+  --border:       rgba(0, 0, 0, 0.08);
+  --border-soft:  rgba(0, 0, 0, 0.04);
+  --border-hover: rgba(0, 0, 0, 0.20);
 
   /* --- Interactive states --- */
-  --hover-bg:  rgba(255, 255, 255, 0.04);
-  --active-bg: rgba(255, 255, 255, 0.08);
+  --hover-bg:  rgba(0, 0, 0, 0.04);
+  --active-bg: rgba(0, 0, 0, 0.08);
 
   /* --- Inputs --- */
-  --input:            rgba(255, 255, 255, 0.04);
-  --input-background: rgba(255, 255, 255, 0.04);
-  --switch-background: rgba(255, 255, 255, 0.20);
+  --input:            rgba(0, 0, 0, 0.04);
+  --input-background: rgba(0, 0, 0, 0.04);
+  --switch-background: rgba(0, 0, 0, 0.20);
   --ring:             rgba(161, 145, 255, 0.50);
 
   /* --- Border radius --- */
   --radius: 0.5rem; /* 8px — panel/modal/card */
 
   /* --- Volleyball position colors --- */
-  --pos-punta:        #A191FF;
-  --pos-punta-bg:     rgba(161, 145, 255, 0.08);
-  --pos-opuesto:      #91CAFF;
-  --pos-opuesto-bg:   rgba(145, 202, 255, 0.08);
-  --pos-central:      #91FFB0;
-  --pos-central-bg:   rgba(145, 255, 176, 0.08);
-  --pos-colocador:    #FFD391;
-  --pos-colocador-bg: rgba(255, 211, 145, 0.08);
-  --pos-libero:       #FF919F;
-  --pos-libero-bg:    rgba(255, 145, 159, 0.08);
-  --pos-segundo:      #DC91FF;
-  --pos-segundo-bg:   rgba(220, 145, 255, 0.08);
+  --pos-punta:        #8B5CF6;
+  --pos-punta-bg:     rgba(139, 92, 246, 0.1);
+  --pos-opuesto:      #3B82F6;
+  --pos-opuesto-bg:   rgba(59, 130, 246, 0.1);
+  --pos-central:      #10B981;
+  --pos-central-bg:   rgba(16, 185, 129, 0.1);
+  --pos-colocador:    #F59E0B;
+  --pos-colocador-bg: rgba(245, 158, 11, 0.1);
+  --pos-libero:       #EF4444;
+  --pos-libero-bg:    rgba(239, 68, 68, 0.1);
+  --pos-segundo:      #D946EF;
+  --pos-segundo-bg:   rgba(217, 70, 239, 0.1);
 
-  /* --- Chart colors (aligned with accent palette) --- */
-  --chart-1: #A191FF;
-  --chart-2: #91CAFF;
-  --chart-3: #91FFB0;
-  --chart-4: #FFD391;
-  --chart-5: #FF919F;
-  --chart-6: #DC91FF;
+  /* --- Chart colors --- */
+  --chart-1: #8B5CF6;
+  --chart-2: #3B82F6;
+  --chart-3: #10B981;
+  --chart-4: #F59E0B;
+  --chart-5: #EF4444;
+  --chart-6: #D946EF;
 
   /* --- Sidebar --- */
-  --sidebar:                    #0d0d0d;
-  --sidebar-foreground:         rgba(255, 255, 255, 1.00);
+  --sidebar:                    #FFFFFF;
+  --sidebar-foreground:         rgba(0, 0, 0, 1.00);
   --sidebar-primary:            #A191FF;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent:             rgba(255, 255, 255, 0.04);
-  --sidebar-accent-foreground:  rgba(255, 255, 255, 0.60);
-  --sidebar-border:             rgba(255, 255, 255, 0.08);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent:             rgba(0, 0, 0, 0.04);
+  --sidebar-accent-foreground:  rgba(0, 0, 0, 0.60);
+  --sidebar-border:             rgba(0, 0, 0, 0.08);
   --sidebar-ring:               rgba(161, 145, 255, 0.50);
 
-  /* --- Neutral scale (compatibility) --- */
-  --neutral-100: rgba(255, 255, 255, 0.04);
-  --neutral-300: rgba(255, 255, 255, 0.20);
-  --neutral-500: rgba(255, 255, 255, 0.40);
-  --neutral-700: rgba(255, 255, 255, 0.60);
-  --neutral-900: rgba(255, 255, 255, 1.00);
+  /* --- Neutral scale --- */
+  --neutral-100: rgba(0, 0, 0, 0.04);
+  --neutral-300: rgba(0, 0, 0, 0.20);
+  --neutral-500: rgba(0, 0, 0, 0.40);
+  --neutral-700: rgba(0, 0, 0, 0.60);
+  --neutral-900: rgba(0, 0, 0, 1.00);
 }
 
 /* Dark class mirrors root — dark is always on in VolleyLab */
@@ -219,8 +219,8 @@
 
   html {
     font-size: var(--font-size);
-    color-scheme: dark;
-    background-color: #000000;
+    color-scheme: light dark;
+    background-color: var(--background);
   }
 
   body {

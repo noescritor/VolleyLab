@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Plus, TrendingUp, Timer, Zap, Target, Edit, Trash2 } from 'lucide-react';
+import { Plus, TrendingUp, Timer, Zap, Target, Edit, Trash2, Activity, Move } from 'lucide-react';
 import { useApp } from '../utils/AppContext';
 
 const INPUT_CLS = 'w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2.5 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#A191FF]/50 transition-colors';
@@ -28,20 +28,33 @@ const testCategories = {
     ]
   },
   power: {
-    name: 'Potencia',
+    name: 'Fuerza / 1RM',
     icon: Target,
     tests: [
-      { key: 'spikeSpeed', name: 'Velocidad de Remate', unit: 'km/h', target: { min: 60, good: 70, excellent: 80 } },
-      { key: 'serveSpeed', name: 'Velocidad de Saque',  unit: 'km/h', target: { min: 50, good: 60, excellent: 70 } }
+      { key: 'benchPress', name: 'Bench Press (1RM)', unit: 'kg', target: { min: 30, good: 45, excellent: 60 } },
+      { key: 'squat', name: 'Sentadilla (1RM)', unit: 'kg', target: { min: 50, good: 70, excellent: 90 } },
+      { key: 'deadlift', name: 'Peso Muerto (1RM)', unit: 'kg', target: { min: 50, good: 75, excellent: 95 } }
+    ]
+  },
+  endurance: {
+    name: 'Resistencia',
+    icon: Activity,
+    tests: [
+      { key: 'cooperTest', name: 'Test de Cooper', unit: 'm', target: { min: 2000, good: 2400, excellent: 2800 } }
+    ]
+  },
+  flexibility: {
+    name: 'Flexibilidad',
+    icon: Move,
+    tests: [
+      { key: 'sitAndReach', name: 'Sit and Reach', unit: 'cm', target: { min: 20, good: 25, excellent: 30 } }
     ]
   },
   reaction: {
     name: 'Reacción',
     icon: Timer,
     tests: [
-      { key: 'reactionTime', name: 'Tiempo de Reacción', unit: 's',  target: { excellent: 0.2, good: 0.25, min: 0.3 }, reverse: true },
-      { key: 'shoulderROM',  name: 'ROM Hombro',         unit: '°',  target: { min: 170, good: 180, excellent: 190 } },
-      { key: 'ankleROM',     name: 'ROM Tobillo',         unit: '°',  target: { min: 40,  good: 45,  excellent: 50  } }
+      { key: 'reactionTime', name: 'Tiempo de Reacción', unit: 's',  target: { excellent: 0.2, good: 0.25, min: 0.3 }, reverse: true }
     ]
   }
 };
@@ -49,7 +62,8 @@ const testCategories = {
 const BLANK_FORM = {
   playerId: '', date: new Date().toISOString().split('T')[0],
   CMJ: '', SJ: '', abordaje: '', vel5m: '', vel10m: '', tTest: '',
-  reactionTime: '', spikeSpeed: '', serveSpeed: '', shoulderROM: '', ankleROM: ''
+  reactionTime: '', spikeSpeed: '', serveSpeed: '', 
+  benchPress: '', squat: '', deadlift: '', cooperTest: '', sitAndReach: ''
 };
 
 function getLevel(value, test) {
@@ -108,7 +122,7 @@ export function PhysicalTesting() {
     date:       t.date,
     CMJ:        t.CMJ,
     abordaje:   t.abordaje,
-    spikeSpeed: t.spikeSpeed,
+    squat:      t.squat,
   }));
 
   const handleEditTest  = (test) => { setEditingTest(test); setIsDialogOpen(true); };
@@ -127,8 +141,9 @@ export function PhysicalTesting() {
             CMJ: editingTest.CMJ || '', SJ: editingTest.SJ || '', abordaje: editingTest.abordaje || '',
             vel5m: editingTest.vel5m || '', vel10m: editingTest.vel10m || '', tTest: editingTest.tTest || '',
             reactionTime: editingTest.reactionTime || '', spikeSpeed: editingTest.spikeSpeed || '',
-            serveSpeed: editingTest.serveSpeed || '', shoulderROM: editingTest.shoulderROM || '',
-            ankleROM: editingTest.ankleROM || '' }
+            serveSpeed: editingTest.serveSpeed || '', benchPress: editingTest.benchPress || '',
+            squat: editingTest.squat || '', deadlift: editingTest.deadlift || '', cooperTest: editingTest.cooperTest || '',
+            sitAndReach: editingTest.sitAndReach || '' }
         : { ...BLANK_FORM });
     }, []);
 
@@ -167,11 +182,11 @@ export function PhysicalTesting() {
         </div>
 
         {/* Category tabs inside form */}
-        <div className="border-b border-white/[0.06] flex gap-0 -mx-1">
+        <div className="border-b border-white/[0.06] flex gap-0 -mx-1 overflow-x-auto pb-px scrollbar-hide">
           {Object.entries(testCategories).map(([key, cat]) => (
             <button key={key} type="button"
               onClick={() => setFormTab(key)}
-              className={`px-4 py-2.5 text-label border-b-2 transition-colors ${
+              className={`px-3 py-2.5 text-label border-b-2 transition-colors whitespace-nowrap ${
                 formTab === key ? 'border-[#A191FF] text-[#A191FF]' : 'border-transparent text-white/30 hover:text-white/60'
               }`}>
               {cat.name}
@@ -234,7 +249,7 @@ export function PhysicalTesting() {
 
       {/* ── Dialog ───────────────────────────────────────────────────────── */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl bg-[#0d0d0d] border border-white/[0.08]">
+        <DialogContent className="sm:max-w-xl md:max-w-2xl bg-[#0d0d0d] border border-white/[0.08]">
           <DialogHeader>
             <DialogTitle className="text-[15px] font-semibold text-white">
               {editingTest ? 'Editar Test Físico' : 'Registrar Test Físico'}
@@ -260,7 +275,7 @@ export function PhysicalTesting() {
                 <Tooltip {...CHART_TOOLTIP_STYLE} />
                 <Line type="monotone" dataKey="CMJ"        stroke="#A191FF" strokeWidth={2} dot={false} name="CMJ (cm)" />
                 <Line type="monotone" dataKey="abordaje"   stroke="#91FFB0" strokeWidth={2} dot={false} name="Abordaje (cm)" />
-                <Line type="monotone" dataKey="spikeSpeed" stroke="#FFD391" strokeWidth={2} dot={false} name="Remate (km/h)" />
+                <Line type="monotone" dataKey="squat"      stroke="#FFD391" strokeWidth={2} dot={false} name="Sentadilla (kg)" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -269,13 +284,13 @@ export function PhysicalTesting() {
 
       {/* ── Category tabs ────────────────────────────────────────────────── */}
       <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg overflow-hidden">
-        <div className="border-b border-white/[0.06] flex gap-0 px-2">
+        <div className="border-b border-white/[0.06] flex gap-0 px-2 overflow-x-auto scrollbar-hide">
           {Object.entries(testCategories).map(([key, cat]) => {
             const Icon = cat.icon;
             return (
               <button key={key}
                 onClick={() => setActiveCategory(key)}
-                className={`flex items-center gap-1.5 px-4 py-3 text-label border-b-2 transition-colors ${
+                className={`flex items-center gap-1.5 px-4 py-3 text-label border-b-2 transition-colors whitespace-nowrap ${
                   activeCategory === key
                     ? 'border-[#A191FF] text-[#A191FF]'
                     : 'border-transparent text-white/30 hover:text-white/60'
@@ -359,6 +374,7 @@ export function PhysicalTesting() {
                           {test.vel5m      && <span className="text-[11px] text-white/40 font-mono">5m: {test.vel5m}s</span>}
                           {test.spikeSpeed && <span className="text-[11px] text-white/40 font-mono">Remate: {test.spikeSpeed}km/h</span>}
                           {test.serveSpeed && <span className="text-[11px] text-white/40 font-mono">Saque: {test.serveSpeed}km/h</span>}
+                          {test.squat      && <span className="text-[11px] text-white/40 font-mono">Sentadilla: {test.squat}kg</span>}
                         </div>
                       </td>
                       <td className="px-5 py-3 text-right">

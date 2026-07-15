@@ -7,15 +7,17 @@ import { PlayerManagement } from './components/PlayerManagement';
 import { PhysicalTesting } from './components/PhysicalTesting';
 import { MatchAnalytics } from './components/MatchAnalytics';
 import { MatchCenter } from './components/MatchCenter';
+import LiveMatchCenter from './components/live-match/LiveMatchCenter';
 import { LoadManagement } from './components/LoadManagement';
 import { PerformanceReports } from './components/PerformanceReports';
+import { TrainingPlan } from './components/TrainingPlan';
 import { TestPage } from './components/TestPage';
 import { AnalyticsDashboard } from './components/analytics/AnalyticsDashboard';
 import { AppProvider, setNavigationCallback } from './utils/AppContext';
 import {
   Activity, Users, TestTube, BarChart3, TrendingUp, FileText,
   Settings, Zap, Brain, Edit3, Save, X, Upload, Link, Trash2,
-  Camera, Loader2, LogOut, ChevronLeft, ChevronRight, Menu,
+  Camera, Loader2, LogOut, ChevronLeft, ChevronRight, Menu, Moon, Sun, Calendar
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { useUserProfile } from './utils/useUserProfile';
@@ -44,6 +46,7 @@ const NAV_TABS = [
   { value: 'match-center', label: 'En Vivo',       icon: Zap,        live: true  },
   { value: 'load',         label: 'Carga',         icon: TrendingUp, live: false },
   { value: 'reports',      label: 'Reportes',      icon: FileText,   live: false },
+  { value: 'training',     label: 'Planeación',    icon: Calendar,   live: false },
 ] as const;
 
 type TabValue = typeof NAV_TABS[number]['value'] | 'test';
@@ -62,13 +65,15 @@ interface SidebarProps {
   onEditAvatar: () => void;
   onSignOut: () => void;
   isSigningOut: boolean;
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
 }
 
 function Sidebar({
   activeTab, collapsed, showUserMenu, userMenuRef,
   userProfile, isProfileLoading,
   onNavClick, onToggleUserMenu, onEditProfile, onEditAvatar,
-  onSignOut, isSigningOut,
+  onSignOut, isSigningOut, theme, onToggleTheme
 }: SidebarProps) {
   return (
     <div className="flex flex-col h-full">
@@ -127,6 +132,17 @@ function Sidebar({
           );
         })}
       </nav>
+
+      {/* Theme Toggle */}
+      <div className="px-3 pb-2 border-t border-white/[0.05] pt-2">
+        <button onClick={onToggleTheme}
+          className={['w-full flex items-center rounded-lg transition-all hover:bg-white/[0.04]', collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'].join(' ')}
+          title={collapsed ? "Cambiar Tema" : undefined}
+        >
+          {theme === 'dark' ? <Sun size={16} className="shrink-0" /> : <Moon size={16} className="shrink-0" />}
+          {!collapsed && <span className="text-[13px] font-medium text-white/60">Modo {theme === 'dark' ? 'Claro' : 'Oscuro'}</span>}
+        </button>
+      </div>
 
       {/* Bottom: user profile */}
       <div className="border-t border-white/[0.05] p-2">
@@ -189,6 +205,10 @@ function AppContent() {
   const [mobileOpen, setMobileOpen]       = useState(false);
   const [showUserMenu, setShowUserMenu]   = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  
+  const [theme, setTheme] = useState<'dark'|'light'>(() => {
+    return (localStorage.getItem('theme') as 'dark'|'light') || 'dark';
+  });
 
   const { userProfile, isLoading: isProfileLoading, updateProfile } = useUserProfile();
 
@@ -222,6 +242,16 @@ function AppContent() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleSignOut = async () => {
@@ -303,6 +333,8 @@ function AppContent() {
     onEditAvatar: openEditAvatar,
     onSignOut: handleSignOut,
     isSigningOut,
+    theme,
+    onToggleTheme: () => setTheme(prev => prev === 'dark' ? 'light' : 'dark')
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -357,9 +389,10 @@ function AppContent() {
             {activeTab === 'physical'     && <PhysicalTesting />}
             {activeTab === 'match'        && <MatchAnalytics />}
             {activeTab === 'analytics'    && <AnalyticsDashboard />}
-            {activeTab === 'match-center' && <MatchCenter />}
+            {activeTab === 'match-center' && <LiveMatchCenter />}
             {activeTab === 'load'         && <LoadManagement />}
             {activeTab === 'reports'      && <PerformanceReports />}
+            {activeTab === 'training'     && <TrainingPlan />}
             {activeTab === 'test'         && <TestPage />}
           </main>
         </div>
