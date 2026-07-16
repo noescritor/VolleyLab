@@ -160,7 +160,7 @@ export function NetHeatmap({ impacts = [], mode = 'view', onCapture, width = 300
         width: width,
         height: height,
         background: C.netBg,
-        border: \`1.5px solid \${C.netLine}\`,
+        border: `1.5px solid ${C.netLine}`,
         borderRadius: 4,
         overflow: 'hidden',
         cursor: mode === 'capture' ? 'crosshair' : 'default',
@@ -171,7 +171,7 @@ export function NetHeatmap({ impacts = [], mode = 'view', onCapture, width = 300
       <div 
         style={{
           position: 'absolute', inset: 0, opacity: 0.05, pointerEvents: 'none', zIndex: 1,
-          backgroundImage: "url(\\\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E\\\")"
+          backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E\")"
         }}
       />
 
@@ -220,12 +220,12 @@ export function NetHeatmap({ impacts = [], mode = 'view', onCapture, width = 300
         />
       ))}
 
-      <style>{\`
+      <style>{`
         @keyframes rippleAnim {
           from { transform: translate(-50%, -50%) scale(0); opacity: 1; }
           to { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
         }
-      \`}</style>
+      `}</style>
     </div>
   );
 }
