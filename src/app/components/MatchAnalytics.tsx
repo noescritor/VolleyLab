@@ -5,6 +5,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Plus, TrendingUp, Target, Shield, Zap, Activity, Calendar, MapPin, Users, Loader2 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { useApp } from '../utils/AppContext';
+import { Player, Match } from '../utils/match-types';
+import { AdvancedHeatmapDashboard } from './AdvancedHeatmapDashboard';
 
 const INPUT_CLS = 'w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2.5 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#A191FF]/50 transition-colors';
 const LABEL_CLS = 'block text-[11px] font-mono uppercase tracking-wide text-white/40 mb-1';
@@ -311,6 +313,9 @@ export function MatchAnalytics() {
               </div>
             </div>
           </div>
+
+          {/* Advanced Interactive Heatmaps (Cancha & Red) */}
+          <AdvancedHeatmapDashboard rallies={(currentMatch as any).rallies || []} />
 
           {/* Fundament tabs + chart */}
           <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg overflow-hidden">

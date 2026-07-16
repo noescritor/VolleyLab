@@ -241,6 +241,7 @@ function convertSupabaseMatchToLegacy(sm: any): Match {
     notes: sm.match_metadata?.notes,
     result: sm.match_metadata?.result,
     score: sm.match_metadata?.score,
+    rallies: sm.match_metadata?.rallies || [],
     players: [],
     createdAt: sm.created_at,
     updatedAt: sm.created_at
@@ -438,7 +439,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           match_metadata: {
             notes: matchData.notes,
             result: matchData.result,
-            score: matchData.score
+            score: matchData.score,
+            rallies: (matchData as any).rallies || []
           }
         });
         

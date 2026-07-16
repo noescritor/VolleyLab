@@ -35,6 +35,9 @@ const SB = { red: C.rd, green: C.gn, gray: C.gyBd };
 /* ═══════════════════════════════════════════
    DATA & CONFIG
 ═══════════════════════════════════════════ */
+import { CourtHeatmap, getZoneFromXY } from './CourtHeatmap';
+import { NetHeatmap, getNetZoneFromXY } from './NetHeatmap';
+
 const FRONT   = ["p4", "p3", "p2"];
 const BACK    = ["p5", "p6", "p1"];
 const ALL_Z   = [...FRONT, ...BACK];
@@ -577,11 +580,6 @@ export default function LiveMatchCenter() {
   /* ── 1. SETUP MATCH ── */
   const handleCreateMatch = async () => {
     if (!opponent) { setMsg("Falta rival"); return; }
-    // Crear el partido en estado global. createMatch es void.
-    await createMatch({
-      opponent, date: new Date().toISOString().split('T')[0],
-      matchType, players: [],
-    });
     setScreen("lineup");
     setMsg("");
   };
@@ -625,11 +623,19 @@ export default function LiveMatchCenter() {
     setPendingEndResult({ winner: side });
   };
 
-  const confirmEndOfRally = (targetZone: string) => {
+  const confirmEndOfRally = (impact: any, plane: 'court'|'net') => {
     if (!pendingEndResult) return;
     
     pushH();
     
+    // Determine the targetZone based on the heatmap used
+    let targetZone = '';
+    if (plane === 'court') {
+      targetZone = getZoneFromXY(impact.x, impact.y);
+    } else {
+      targetZone = getNetZoneFromXY(impact.x);
+    }
+
     // Add the final action to the rally if it came from a gesture
     const finalActions = [...currentRallyActions];
     if (pendingEndResult.action) {
@@ -641,6 +647,7 @@ export default function LiveMatchCenter() {
       id: Date.now().toString(),
       winner: pendingEndResult.winner,
       endLocation: targetZone,
+      impact: { ...impact, plane },
       actions: finalActions
     };
     setAllRallies(prev => [...prev, newRally]);
@@ -685,18 +692,36 @@ export default function LiveMatchCenter() {
     setScreen("lineup");
   };
 
-  const endMatch = () => {
-    // Aquí enviaríamos al backend todos los rallies consolidados (Ej via updateMatch)
+  const endMatch = async () => {
     setMsg("Guardando partido...");
-    setTimeout(() => {
-      // Regresar al estado inicial o redirigir
-      setScreen("setup");
-      setAllRallies([]);
-      setOurScore(0);
-      setRivalScore(0);
-      setSetNum(1);
-      setMsg("");
-    }, 1500);
+    
+    // Compute aggregated player stats from allRallies if we wanted, but we can also just save rallies
+    const scoreStr = `${ourScore}-${rivalScore}`;
+    const resultStr = ourScore > rivalScore ? 'W' : 'L';
+
+    try {
+      await createMatch({
+        opponent, 
+        date: new Date().toISOString().split('T')[0],
+        matchType, 
+        players: [], 
+        score: scoreStr,
+        result: resultStr,
+        rallies: allRallies
+      } as any);
+
+      setTimeout(() => {
+        setScreen("setup");
+        setAllRallies([]);
+        setOurScore(0);
+        setRivalScore(0);
+        setSetNum(1);
+        setMsg("");
+      }, 1500);
+    } catch (err) {
+      setMsg("Error guardando");
+      console.error(err);
+    }
   };
 
 
@@ -858,13 +883,38 @@ export default function LiveMatchCenter() {
       {showAnalytics && <LiveAnalytics rallies={allRallies} players={players} onClose={() => setShowAnalytics(false)} />}
       
       {pendingEndResult && (
-        <CourtTargetMap 
-          title={pendingEndResult.winner === 'our' ? '¡PUNTO NUESTRO!' : 'PUNTO RIVAL'}
-          subtitle="Toca la zona donde cayó el balón en la cancha para terminar."
-          color={pendingEndResult.winner === 'our' ? C.gnLt : C.rdLt}
-          onSelectTarget={confirmEndOfRally}
-          onCancel={() => setPendingEndResult(null)}
-        />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', padding: 20 }}>
+          <div style={{ position: 'relative', width: 300 }}>
+            {/* Header info */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ color: pendingEndResult.winner === 'our' ? C.gnLt : C.rdLt, fontWeight: 600, fontSize: 14 }}>
+                {pendingEndResult.winner === 'our' ? '¡PUNTO NUESTRO!' : 'PUNTO RIVAL'}
+              </div>
+              <button 
+                onClick={() => setPendingEndResult(null)} 
+                style={{ color: C.t2, fontSize: 12, background: 'transparent', border: 'none', padding: 0 }}
+              >
+                ✕ Cancelar
+              </button>
+            </div>
+            
+            <div style={{ color: C.w, fontSize: 12, marginBottom: 12, opacity: 0.8 }}>
+              Toca {pendingEndResult.action?.gesture === 'bloqueo' ? 'la red' : 'la cancha'} donde finalizó la acción
+            </div>
+
+            {pendingEndResult.action?.gesture === 'bloqueo' ? (
+              <NetHeatmap 
+                mode="capture"
+                onCapture={(impact) => confirmEndOfRally(impact, 'net')}
+              />
+            ) : (
+              <CourtHeatmap 
+                mode="capture"
+                onCapture={(impact) => confirmEndOfRally(impact, 'court')}
+              />
+            )}
+          </div>
+        </div>
       )}
 
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", justifyContent: "center" }}>
