@@ -24,6 +24,10 @@ const FUNDAM_COLOR: Record<string, string> = {
   attacks: '#00e5ff', serves: '#ffdd00', reception: '#91FFB0', blocks: '#A191FF'
 };
 
+const fundDataKey: Record<string, string> = {
+  attacks: 'hitting', serves: 'aces', reception: 'efficiency', blocks: 'stuffs'
+};
+
 const positionKPIs: Record<string, string[]> = {
   Opuesto:   ['attacks', 'serves', 'blocks'],
   Punta:     ['attacks', 'serves', 'reception'],
