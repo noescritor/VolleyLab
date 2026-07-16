@@ -14,7 +14,9 @@ export function AdvancedHeatmapDashboard({ rallies }: AdvancedHeatmapDashboardPr
     return rallies
       .filter(r => r.impact && r.impact.plane === 'court')
       .filter(r => {
-        const gesture = r.actions[r.actions.length - 1]?.gesture;
+        const gesture = r.actions && r.actions.length > 0 
+          ? r.actions[r.actions.length - 1]?.gesture?.toLowerCase()
+          : r.finalAction?.toLowerCase();
         if (activeTab === 'ataques') return gesture === 'ataque';
         if (activeTab === 'saques') return gesture === 'saque';
         return false;
@@ -32,7 +34,9 @@ export function AdvancedHeatmapDashboard({ rallies }: AdvancedHeatmapDashboardPr
     return rallies
       .filter(r => r.impact && r.impact.plane === 'net')
       .filter(r => {
-        const gesture = r.actions[r.actions.length - 1]?.gesture;
+        const gesture = r.actions && r.actions.length > 0 
+          ? r.actions[r.actions.length - 1]?.gesture?.toLowerCase()
+          : r.finalAction?.toLowerCase();
         return gesture === 'bloqueo';
       })
       .map(r => ({
