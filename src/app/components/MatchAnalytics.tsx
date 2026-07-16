@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Plus, TrendingUp, Target, Shield, Zap, Activity, Calendar, MapPin, Users, Loader2 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, ReferenceLine } from 'recharts';
+import { Plus, Target, Shield, Zap, Activity, Calendar, MapPin, Users, Loader2 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { useApp } from '../utils/AppContext';
-import { Player, Match } from '../utils/match-types';
 import { AdvancedHeatmapDashboard } from './AdvancedHeatmapDashboard';
 
 const INPUT_CLS = 'w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2.5 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#A191FF]/50 transition-colors';
@@ -22,7 +21,7 @@ const POS_COLORS: Record<string, string> = {
 };
 
 const FUNDAM_COLOR: Record<string, string> = {
-  attacks: '#A191FF', serves: '#91FFB0', reception: '#FFD391', blocks: '#91CAFF'
+  attacks: '#00e5ff', serves: '#ffdd00', reception: '#91FFB0', blocks: '#A191FF'
 };
 
 const positionKPIs: Record<string, string[]> = {
@@ -33,32 +32,156 @@ const positionKPIs: Record<string, string[]> = {
   Líbero:    ['reception'],
 };
 
+function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers: any[]) {
+  const currentMatch = selectedMatchId ? matches?.find(m => m.id === selectedMatchId) : matches?.[0];
+  if (!currentMatch) return null;
+
+  const rallies = currentMatch.rallies || [];
+  
+  const teamBalance = { pos: 0, neu: 0, neg: 0 };
+  const momentum: any[] = [{ name: '0-0', diff: 0, ourScore: 0, rivalScore: 0 }];
+  
+  let sideOutChances = 0;
+  let sideOutSuccess = 0;
+  let transitionChances = 0;
+  let transitionSuccess = 0;
+
+  const pStats: Record<string, any> = {};
+  
+  // Initialize all players
+  allPlayers.forEach(p => {
+    pStats[p.id] = {
+      id: p.id, name: p.name, position: p.position, number: p.number,
+      attacks: { pos: 0, neu: 0, neg: 0, kills: 0, attempts: 0 },
+      serves: { pos: 0, neu: 0, neg: 0, aces: 0, errors: 0 },
+      receptions: { pos: 0, neu: 0, neg: 0, perfect: 0, attempts: 0 },
+      blocks: { pos: 0, neu: 0, neg: 0, stuffs: 0 }
+    };
+  });
+
+  rallies.forEach((r: any, idx: number) => {
+    momentum.push({
+      name: `${r.ourScore}-${r.rivalScore}`,
+      diff: r.ourScore - r.rivalScore,
+      ourScore: r.ourScore,
+      rivalScore: r.rivalScore
+    });
+
+    // Simulate Sideout/Transition based on serve (very basic heuristic)
+    const firstAction = r.actions?.[0];
+    if (firstAction && firstAction.gesture === 'saque') {
+      if (firstAction.playerId) { // We served -> Transition phase for us
+        transitionChances++;
+        if (r.winner === 'our') transitionSuccess++;
+      } else { // They served -> Sideout phase for us
+        sideOutChances++;
+        if (r.winner === 'our') sideOutSuccess++;
+      }
+    } else {
+      // Seed data heuristic
+      if (idx % 2 === 0) { sideOutChances++; if(r.winner === 'our') sideOutSuccess++; }
+      else { transitionChances++; if(r.winner === 'our') transitionSuccess++; }
+    }
+
+    if (r.actions && r.actions.length > 0) {
+      r.actions.forEach((a: any) => {
+        if (!a.playerId || !pStats[a.playerId]) return;
+        const s = pStats[a.playerId];
+        const q = a.quality === '+' ? 'pos' : a.quality === '-' ? 'neg' : 'neu';
+        
+        teamBalance[q]++;
+        
+        const g = a.gesture?.toLowerCase();
+        if (g === 'ataque' || g === 'ataque ') {
+          s.attacks[q]++;
+          s.attacks.attempts++;
+          if (q === 'pos') s.attacks.kills++;
+        }
+        else if (g === 'saque') {
+          s.serves[q]++;
+          if (q === 'pos') s.serves.aces++;
+          if (q === 'neg') s.serves.errors++;
+        }
+        else if (g === 'recepción' || g === 'recepcion') {
+          s.receptions[q]++;
+          s.receptions.attempts++;
+          if (q === 'pos') s.receptions.perfect++;
+        }
+        else if (g === 'bloqueo') {
+          s.blocks[q]++;
+          if (q === 'pos') s.blocks.stuffs++;
+        }
+      });
+    } else {
+      // Seed data fallback
+      let matchedPlayerId = null;
+      if (r.playerNumber) {
+        const p = allPlayers.find(x => x.number == r.playerNumber);
+        if (p) matchedPlayerId = p.id;
+      }
+      
+      if (matchedPlayerId && pStats[matchedPlayerId]) {
+        const s = pStats[matchedPlayerId];
+        const g = r.finalAction?.toLowerCase();
+        const q = r.winner === 'our' ? 'pos' : r.winner === 'rival' ? 'neg' : 'neu';
+        
+        teamBalance[q]++;
+        
+        if (g === 'ataque') {
+          s.attacks[q]++;
+          s.attacks.attempts++;
+          if (q === 'pos') s.attacks.kills++;
+        }
+        else if (g === 'saque') {
+          s.serves[q]++;
+          if (q === 'pos') s.serves.aces++;
+          if (q === 'neg') s.serves.errors++;
+        }
+        else if (g === 'bloqueo') {
+          s.blocks[q]++;
+          if (q === 'pos') s.blocks.stuffs++;
+        }
+      }
+    }
+  });
+
+  return {
+    match: currentMatch,
+    rallies,
+    momentum,
+    teamBalance,
+    players: Object.values(pStats).filter((p: any) => 
+      p.attacks.attempts > 0 || p.serves.pos > 0 || p.serves.neg > 0 || p.serves.neu > 0 || 
+      p.receptions.attempts > 0 || p.blocks.pos > 0 || p.blocks.neg > 0 || p.blocks.neu > 0
+    ),
+    sideOutPct: sideOutChances > 0 ? Math.round((sideOutSuccess/sideOutChances)*100) : 0,
+    transPct: transitionChances > 0 ? Math.round((transitionSuccess/transitionChances)*100) : 0,
+  };
+}
+
 export function MatchAnalytics() {
   const { state, createMatch } = useApp();
-  const [selectedMatch, setSelectedMatch]     = useState('');
+  const [selectedMatch, setSelectedMatch] = useState('');
+  const [activeTab, setActiveTab] = useState<'heatmaps'|'efficiency'|'kpis'>('efficiency');
   const [selectedFundament, setSelectedFundament] = useState('attacks');
-  const [isDialogOpen, setIsDialogOpen]       = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const [newMatchForm, setNewMatchForm] = useState({
-    opponent: '', date: '', time: '', venue: '', matchType: 'regular', notes: '', selectedPlayers: [] as any[]
+    opponent: '', date: '', time: '', venue: '', matchType: 'regular', notes: '', selectedPlayers: [] as string[]
   });
 
   React.useEffect(() => {
     if (state.matches?.length > 0 && !selectedMatch) setSelectedMatch(state.matches[0].id);
   }, [state.matches, selectedMatch]);
 
-  const currentMatch = state.matches?.find(m => m.id === selectedMatch);
-
-  const handlePlayerToggle = (id) => {
+  const handlePlayerToggle = (id: string) => {
     setNewMatchForm(p => ({
       ...p,
-      selectedPlayers: p.selectedPlayers.includes(id)
-        ? p.selectedPlayers.filter(x => x !== id)
-        : [...p.selectedPlayers, id]
+      selectedPlayers: p.selectedPlayers.includes(id) ? p.selectedPlayers.filter(x => x !== id) : [...p.selectedPlayers, id]
     }));
   };
 
-  const handleCreateMatch = async (e) => {
+  const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMatchForm.opponent.trim()) { toast.error('El equipo rival es requerido'); return; }
     if (!newMatchForm.date)            { toast.error('La fecha es requerida');         return; }
@@ -70,16 +193,7 @@ export function MatchAnalytics() {
         time: newMatchForm.time,         venue: newMatchForm.venue,
         matchType: newMatchForm.matchType, notes: newMatchForm.notes,
         result: null, score: null, sideOut: 0, transition: 0,
-        players: newMatchForm.selectedPlayers.map(pid => {
-          const p = state.players.find(x => x.id === pid);
-          return {
-            id: p?.id || pid, name: p?.name || 'Desconocida', position: p?.position || 'N/A',
-            attacks:   { attempts: 0, kills: 0, errors: 0, blocked: 0, hitting: 0 },
-            serves:    { attempts: 0, aces: 0, errors: 0, effectiveness: 0 },
-            reception: { attempts: 0, perfect: 0, good: 0, efficiency: 0 },
-            blocks:    { stuffs: 0, assists: 0, participation: 0 }
-          };
-        })
+        players: []
       });
       setNewMatchForm({ opponent: '', date: '', time: '', venue: '', matchType: 'regular', notes: '', selectedPlayers: [] });
       setIsDialogOpen(false);
@@ -88,44 +202,36 @@ export function MatchAnalytics() {
     }
   };
 
-  // Chart data helpers
-  const chartData = (type: string) => {
-    if (!currentMatch) return [];
-    return currentMatch.players.map(p => ({
-      name:       p.name.split(' ')[0],
-      hitting:    p.attacks.hitting,
-      kills:      p.attacks.kills,
-      aces:       p.serves.aces,
-      efficiency: p.reception.efficiency,
-      stuffs:     p.blocks.stuffs,
-    }));
-  };
-
-  const positionDist = () => {
-    if (!currentMatch) return [];
-    const counts: Record<string, number> = {};
-    currentMatch.players.forEach(p => { counts[p.position] = (counts[p.position] || 0) + 1; });
-    return Object.entries(counts).map(([pos, val]) => ({ name: pos, value: val, fill: POS_COLORS[pos] || '#A191FF' }));
-  };
-
-  const fundDataKey = { attacks: 'hitting', serves: 'aces', reception: 'efficiency', blocks: 'stuffs' };
+  const dynStats = useMemo(() => computeDynamicStats(state.matches, selectedMatch, state.players), [state.matches, selectedMatch, state.players]);
 
   if (state.loading?.matches) {
     return (
       <div className="flex items-center justify-center py-16 gap-3">
-        <Loader2 size={18} className="animate-spin text-[#A191FF]" />
+        <Loader2 size={18} className="animate-spin text-[#00e5ff]" />
         <span className="text-[13px] text-white/40">Cargando partidos…</span>
       </div>
     );
   }
 
+  // --- Rendering Helpers ---
+  const chartData = (type: string) => {
+    if (!dynStats) return [];
+    return dynStats.players.map((p: any) => ({
+      name: p.name.split(' ')[0],
+      hitting: p.attacks.attempts > 0 ? Math.round(((p.attacks.pos - p.attacks.neg) / p.attacks.attempts) * 100) : 0,
+      kills: p.attacks.kills,
+      aces: p.serves.pos,
+      efficiency: p.receptions.attempts > 0 ? ((p.receptions.pos - p.receptions.neg) / p.receptions.attempts).toFixed(2) : 0,
+      stuffs: p.blocks.pos,
+    }));
+  };
+
   return (
     <div className="px-6 py-5 space-y-5">
-
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-3">
         <Select value={selectedMatch} onValueChange={setSelectedMatch}>
-          <SelectTrigger className="w-64 bg-white/[0.04] border-white/[0.08] text-[13px] text-white">
+          <SelectTrigger className="w-full md:w-64 bg-white/[0.04] border-white/[0.08] text-[13px] text-white">
             <SelectValue placeholder="Seleccionar partido" />
           </SelectTrigger>
           <SelectContent className="bg-[#1a1a1a] border-white/[0.08]">
@@ -138,12 +244,293 @@ export function MatchAnalytics() {
         </Select>
 
         <button onClick={() => setIsDialogOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#A191FF] hover:bg-[#B8ADFF] text-black text-label font-semibold rounded-lg transition-colors">
+          className="flex items-center gap-2 px-4 py-2 bg-[#00e5ff] hover:bg-[#00e5ff]/80 text-black text-label font-semibold rounded-lg transition-colors w-full md:w-auto justify-center">
           <Plus size={14} />Nuevo Partido
         </button>
       </div>
 
-      {/* ── Dialog: new match ────────────────────────────────────────────── */}
+      {/* ── Empty state ──────────────────────────────────────────────────── */}
+      {(!state.matches || state.matches.length === 0) && (
+        <div className="py-12 text-center border border-dashed border-[#2e4a72]/50 rounded-lg">
+          <p className="text-[13px] text-[#5a6070] mb-4">Sin partidos registrados.</p>
+          <button onClick={() => setIsDialogOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#00e5ff] hover:bg-[#00e5ff]/80 text-black text-label font-semibold rounded-lg transition-colors mx-auto">
+            <Plus size={14} />Crear primer partido
+          </button>
+        </div>
+      )}
+
+      {/* ── Match detail ─────────────────────────────────────────────────── */}
+      {dynStats && dynStats.match && (
+        <>
+          {/* Header Info */}
+          <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg overflow-hidden shadow-[0_0_15px_rgba(0,229,255,0.05)]">
+            <div className="px-5 py-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] text-[#00e5ff] tracking-widest uppercase mb-1">{dynStats.match.matchType || 'Oficial'}</p>
+                <p className="text-[18px] font-semibold text-white">vs {dynStats.match.opponent}</p>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-[24px] font-mono font-bold text-white leading-none">{dynStats.match.score || '0-0'}</span>
+                <span className="text-[10px] tracking-wider px-2 py-0.5 rounded border uppercase"
+                  style={dynStats.match.result === 'W'
+                    ? { color: '#00e5ff', borderColor: '#00e5ff', backgroundColor: 'rgba(0,229,255,0.05)' }
+                    : { color: '#ff1100', borderColor: '#ff1100', backgroundColor: 'rgba(255,17,0,0.05)' }}>
+                  {dynStats.match.result === 'W' ? 'Victoria' : 'Derrota'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Custom Tabs Navigation */}
+          <div className="flex gap-1 bg-[#11141a] p-1 rounded-lg border border-[#2e4a72]/30 w-fit">
+            <button onClick={() => setActiveTab('heatmaps')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'heatmaps' ? 'bg-[#00e5ff] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+              Resumen & Heatmaps
+            </button>
+            <button onClick={() => setActiveTab('efficiency')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'efficiency' ? 'bg-[#00e5ff] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+              Análisis de Eficiencia
+            </button>
+            <button onClick={() => setActiveTab('kpis')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'kpis' ? 'bg-[#00e5ff] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+              KPIs Individuales
+            </button>
+          </div>
+
+          {/* TAB 1: HEATMAPS & MOMENTUM */}
+          {activeTab === 'heatmaps' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {/* Momentum Line Chart */}
+              {dynStats.momentum.length > 1 && (
+                <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
+                  <p className="text-[12px] font-semibold text-[#00e5ff] uppercase tracking-widest mb-4">Momentum del Partido (Diferencia de Puntos)</p>
+                  <div className="h-40">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={dynStats.momentum} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#2e4a72" opacity={0.3} />
+                        <XAxis dataKey="name" tick={{ fill: '#5a6070', fontSize: 10 }} axisLine={false} tickLine={false} minTickGap={20} />
+                        <YAxis tick={{ fill: '#5a6070', fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ backgroundColor: '#0a0c10', border: '1px solid #2e4a72', borderRadius: '8px' }} labelStyle={{ color: '#00e5ff', marginBottom: '4px' }} itemStyle={{ color: '#fff', fontSize: '12px' }} />
+                        <ReferenceLine y={0} stroke="#5a6070" strokeWidth={1} />
+                        <Line type="monotone" dataKey="diff" name="Diferencia" stroke="#00e5ff" strokeWidth={3} dot={{ r: 2, fill: '#00e5ff' }} activeDot={{ r: 5, fill: '#fff' }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
+              {/* Heatmaps */}
+              <AdvancedHeatmapDashboard rallies={dynStats.rallies} />
+            </div>
+          )}
+
+          {/* TAB 2: EFFICIENCY MATRIX */}
+          {activeTab === 'efficiency' && (
+            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              
+              {/* Team Balance Bar */}
+              <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
+                <p className="text-[12px] font-semibold text-[#00e5ff] uppercase tracking-widest mb-4">Balance General del Equipo</p>
+                
+                <div className="flex h-6 rounded-full overflow-hidden mb-3 bg-black">
+                  {(() => {
+                    const t = dynStats.teamBalance.pos + dynStats.teamBalance.neu + dynStats.teamBalance.neg;
+                    if (t === 0) return <div className="w-full bg-[#2e4a72]/30"></div>;
+                    const pPct = (dynStats.teamBalance.pos / t) * 100;
+                    const ePct = (dynStats.teamBalance.neu / t) * 100;
+                    const nPct = (dynStats.teamBalance.neg / t) * 100;
+                    return (
+                      <>
+                        <div style={{ width: `${pPct}%` }} className="bg-[#00e5ff] transition-all duration-500" title={`Positivos: ${pPct.toFixed(1)}%`} />
+                        <div style={{ width: `${ePct}%` }} className="bg-[#ffdd00] transition-all duration-500" title={`Neutros: ${ePct.toFixed(1)}%`} />
+                        <div style={{ width: `${nPct}%` }} className="bg-[#ff1100] transition-all duration-500" title={`Negativos: ${nPct.toFixed(1)}%`} />
+                      </>
+                    );
+                  })()}
+                </div>
+                
+                <div className="flex justify-between items-center text-[11px] font-mono">
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#00e5ff]"></div><span className="text-white">{dynStats.teamBalance.pos} Positivos</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#ffdd00]"></div><span className="text-white">{dynStats.teamBalance.neu} Neutros</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#ff1100]"></div><span className="text-white">{dynStats.teamBalance.neg} Errores</span></div>
+                </div>
+              </div>
+
+              {/* Player Matrix Table */}
+              <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[700px]">
+                  <thead>
+                    <tr className="border-b border-[#2e4a72]/50 bg-[#0a0c10]">
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-[#5a6070] font-semibold">Jugadora</th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-[#5a6070] font-semibold text-center">Ataques (+ / = / -)</th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-[#5a6070] font-semibold text-center">Saques (+ / = / -)</th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-[#5a6070] font-semibold text-center">Recepción (+ / = / -)</th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-[#5a6070] font-semibold text-center">Eficacia Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#2e4a72]/20">
+                    {dynStats.players.map((p: any) => {
+                      const totalPos = p.attacks.pos + p.serves.pos + p.receptions.pos + p.blocks.pos;
+                      const totalNeg = p.attacks.neg + p.serves.neg + p.receptions.neg + p.blocks.neg;
+                      const totalAtt = totalPos + totalNeg + p.attacks.neu + p.serves.neu + p.receptions.neu + p.blocks.neu;
+                      const eff = totalAtt > 0 ? ((totalPos - totalNeg) / totalAtt * 100).toFixed(1) : '0.0';
+
+                      return (
+                        <tr key={p.id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="px-4 py-3">
+                            <p className="text-[13px] text-white font-medium">{p.name}</p>
+                            <p className="text-[10px] text-[#5a6070]">{p.position}</p>
+                          </td>
+                          <td className="px-4 py-3 text-center font-mono text-[12px]">
+                            <span className="text-[#00e5ff]">{p.attacks.pos}</span> / <span className="text-[#ffdd00]">{p.attacks.neu}</span> / <span className="text-[#ff1100]">{p.attacks.neg}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center font-mono text-[12px]">
+                            <span className="text-[#00e5ff]">{p.serves.pos}</span> / <span className="text-[#ffdd00]">{p.serves.neu}</span> / <span className="text-[#ff1100]">{p.serves.neg}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center font-mono text-[12px]">
+                            <span className="text-[#00e5ff]">{p.receptions.pos}</span> / <span className="text-[#ffdd00]">{p.receptions.neu}</span> / <span className="text-[#ff1100]">{p.receptions.neg}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`text-[12px] font-mono font-semibold px-2 py-1 rounded ${Number(eff) > 0 ? 'bg-[#00e5ff]/10 text-[#00e5ff]' : Number(eff) < 0 ? 'bg-[#ff1100]/10 text-[#ff1100]' : 'bg-white/5 text-white/50'}`}>
+                              {Number(eff) > 0 ? '+' : ''}{eff}%
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {dynStats.players.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center text-[12px] text-[#5a6070]">No hay jugadas registradas para evaluar jugadoras.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: INDIVIDUAL KPIs */}
+          {activeTab === 'kpis' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              
+              {/* General KPIs */}
+              <div className="grid grid-cols-2 divide-x divide-[#2e4a72]/50 bg-[#11141a] border border-[#2e4a72]/50 rounded-lg">
+                <div className="px-5 py-4 text-center">
+                  <p className="text-[26px] font-bold font-mono text-[#00e5ff]">{dynStats.sideOutPct}%</p>
+                  <p className="text-[10px] uppercase tracking-widest text-[#5a6070] mt-1">Side-Out</p>
+                </div>
+                <div className="px-5 py-4 text-center">
+                  <p className="text-[26px] font-bold font-mono text-white">{dynStats.transPct}%</p>
+                  <p className="text-[10px] uppercase tracking-widest text-[#5a6070] mt-1">Transición</p>
+                </div>
+              </div>
+
+              {/* Fundament tabs + chart */}
+              <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg overflow-hidden">
+                <div className="border-b border-[#2e4a72]/50 flex gap-0 px-2">
+                  {[
+                    { key: 'attacks',   label: 'Ataque',    icon: Target   },
+                    { key: 'serves',    label: 'Saque',     icon: Zap      },
+                    { key: 'reception', label: 'Recepción', icon: Activity },
+                    { key: 'blocks',    label: 'Bloqueo',   icon: Shield   },
+                  ].map(({ key, label, icon: Icon }) => (
+                    <button key={key}
+                      onClick={() => setSelectedFundament(key)}
+                      className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-mono uppercase tracking-wider border-b-2 transition-colors ${
+                        selectedFundament === key
+                          ? 'border-[#00e5ff] text-[#00e5ff]'
+                          : 'border-transparent text-[#5a6070] hover:text-white'
+                      }`}>
+                      <Icon size={12} />{label}
+                    </button>
+                  ))}
+                </div>
+                <div className="px-5 py-4 h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData(selectedFundament)}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2e4a72" opacity={0.3} />
+                      <XAxis dataKey="name" tick={{ fill: '#5a6070', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#5a6070', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <Tooltip {...CHART_TOOLTIP} />
+                      <Bar dataKey={fundDataKey[selectedFundament]} fill={FUNDAM_COLOR[selectedFundament] || '#00e5ff'} radius={[3,3,0,0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Individual Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {dynStats.players.map((player: any) => {
+                  const kpis = positionKPIs[player.position] || ['attacks'];
+                  const posColor = POS_COLORS[player.position] || '#A191FF';
+                  return (
+                    <div key={player.id} className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg overflow-hidden">
+                      <div className="px-4 py-3 border-b border-[#2e4a72]/30 flex items-center justify-between">
+                        <p className="text-[13px] font-semibold text-white">{player.name}</p>
+                        <span className="text-[9px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded"
+                          style={{ color: posColor, backgroundColor: `${posColor}15` }}>
+                          {player.position}
+                        </span>
+                      </div>
+                      <div className="px-4 py-3 space-y-3">
+                        {kpis.includes('attacks') && (
+                          <div>
+                            <p className="text-[9px] uppercase tracking-widest text-[#5a6070] flex items-center gap-1.5 mb-1.5"><Target size={10} />Ataque</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
+                                <p className="text-[16px] font-bold font-mono text-white">
+                                  {player.attacks.attempts > 0 ? (((player.attacks.pos - player.attacks.neg) / player.attacks.attempts) * 100).toFixed(1) : 0}%
+                                </p>
+                                <p className="text-[9px] font-mono text-[#5a6070]">EFICACIA</p>
+                              </div>
+                              <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
+                                <p className="text-[16px] font-bold font-mono text-white">{player.attacks.pos}/{player.attacks.attempts}</p>
+                                <p className="text-[9px] font-mono text-[#5a6070]">KILLS (+)</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {kpis.includes('serves') && (
+                          <div>
+                            <p className="text-[9px] uppercase tracking-widest text-[#5a6070] flex items-center gap-1.5 mb-1.5"><Zap size={10} />Saque</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
+                                <p className="text-[16px] font-bold font-mono text-[#00e5ff]">{player.serves.pos}</p>
+                                <p className="text-[9px] font-mono text-[#5a6070]">ACES</p>
+                              </div>
+                              <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
+                                <p className="text-[16px] font-bold font-mono text-[#ff1100]">{player.serves.neg}</p>
+                                <p className="text-[9px] font-mono text-[#5a6070]">ERRORES</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {kpis.includes('reception') && (
+                          <div>
+                            <p className="text-[9px] uppercase tracking-widest text-[#5a6070] flex items-center gap-1.5 mb-1.5"><Activity size={10} />Recepción</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
+                                <p className="text-[16px] font-bold font-mono text-white">
+                                  {player.receptions.attempts > 0 ? ((player.receptions.pos - player.receptions.neg) / player.receptions.attempts).toFixed(2) : 0}
+                                </p>
+                                <p className="text-[9px] font-mono text-[#5a6070]">EFICIENCIA</p>
+                              </div>
+                              <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
+                                <p className="text-[16px] font-bold font-mono text-[#00e5ff]">{player.receptions.pos}/{player.receptions.attempts}</p>
+                                <p className="text-[9px] font-mono text-[#5a6070]">PERFECTAS</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Dialog for creating Match - Included from before */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl h-[92vh] flex flex-col bg-[#0d0d0d] border border-white/[0.08] p-0">
           <DialogHeader className="shrink-0 px-6 py-4 border-b border-white/[0.06]">
@@ -152,7 +539,6 @@ export function MatchAnalytics() {
 
           <form onSubmit={handleCreateMatch} className="flex-1 overflow-y-auto min-h-0">
             <div className="px-6 py-5 space-y-5">
-
               {/* Info del partido */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
@@ -191,6 +577,7 @@ export function MatchAnalytics() {
                       onChange={e => setNewMatchForm(p => ({ ...p, time: e.target.value }))}
                       className={INPUT_CLS} />
                   </div>
+                  
                   <div className="sm:col-span-2">
                     <label className={LABEL_CLS}>Lugar</label>
                     <div className="relative">
@@ -229,10 +616,10 @@ export function MatchAnalytics() {
                         <div key={player.id}
                           onClick={() => handlePlayerToggle(player.id)}
                           className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                            selected ? 'border-[#A191FF]/40 bg-[#A191FF]/05' : 'border-white/[0.08] hover:border-white/20'
+                            selected ? 'border-[#00e5ff]/40 bg-[#00e5ff]/5' : 'border-white/[0.08] hover:border-white/20'
                           }`}>
                           <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                            selected ? 'bg-[#A191FF] border-[#A191FF]' : 'border-white/20'
+                            selected ? 'bg-[#00e5ff] border-[#00e5ff]' : 'border-white/20'
                           }`}>
                             {selected && <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
                               <path d="M1 4l2.5 2.5L9 1" stroke="black" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -248,193 +635,21 @@ export function MatchAnalytics() {
                   </div>
                 )}
               </div>
-
-              {/* Resumen */}
-              {(newMatchForm.opponent || newMatchForm.date || newMatchForm.selectedPlayers.length > 0) && (
-                <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-4 space-y-2">
-                  <p className="text-[12px] font-semibold text-white">Resumen del partido</p>
-                  {newMatchForm.opponent && <p className="text-[13px] text-white/50"><span className="text-white/25">Rival:</span> {newMatchForm.opponent}</p>}
-                  {newMatchForm.date    && <p className="text-[13px] text-white/50 font-mono"><span className="text-white/25">Fecha:</span> {newMatchForm.date}</p>}
-                  {newMatchForm.selectedPlayers.length > 0 && <p className="text-[13px] text-white/50"><span className="text-white/25">Jugadoras:</span> {newMatchForm.selectedPlayers.length} convocadas</p>}
-                </div>
-              )}
             </div>
 
             <div className="shrink-0 px-6 py-4 border-t border-white/[0.06] flex justify-end gap-3">
               <button type="button" onClick={() => setIsDialogOpen(false)}
-                className="px-4 py-2 text-label text-white/40 hover:text-white transition-colors">
+                className="px-4 py-2 text-[12px] font-semibold text-white/40 hover:text-white transition-colors">
                 Cancelar
               </button>
               <button type="submit" disabled={state.players.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-[#A191FF] hover:bg-[#B8ADFF] text-black text-label font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                className="flex items-center gap-2 px-4 py-2 bg-[#00e5ff] hover:bg-[#00e5ff]/80 text-black text-[12px] font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                 <Plus size={14} />Crear Partido
               </button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* ── Empty state ──────────────────────────────────────────────────── */}
-      {(!state.matches || state.matches.length === 0) && (
-        <div className="py-12 text-center border border-dashed border-white/[0.08] rounded-lg">
-          <p className="text-[13px] text-white/30 mb-4">Sin partidos registrados.</p>
-          <button onClick={() => setIsDialogOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#A191FF] hover:bg-[#B8ADFF] text-black text-label font-semibold rounded-lg transition-colors mx-auto">
-            <Plus size={14} />Crear primer partido
-          </button>
-        </div>
-      )}
-
-      {/* ── Match detail ─────────────────────────────────────────────────── */}
-      {currentMatch && (
-        <>
-          {/* KPI header */}
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-white/[0.06] flex items-center justify-between">
-              <p className="text-[14px] font-semibold text-white">vs {currentMatch.opponent}</p>
-              <div className="flex items-center gap-2">
-                <span className="text-label font-mono text-white">{currentMatch.score}</span>
-                <span className="text-label px-2 py-0.5 rounded-full"
-                  style={currentMatch.result === 'W'
-                    ? { color: '#91FFB0', backgroundColor: 'rgba(145,255,176,0.08)' }
-                    : { color: '#FF919F', backgroundColor: 'rgba(255,145,159,0.08)' }}>
-                  {currentMatch.result === 'W' ? 'VICTORIA' : 'DERROTA'}
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 divide-x divide-white/[0.06]">
-              <div className="px-5 py-4 text-center">
-                <p className="text-[26px] font-bold font-mono" style={{ color: '#91FFB0' }}>{currentMatch.sideOut}%</p>
-                <p className="text-label text-white/25 mt-1">SIDE-OUT</p>
-              </div>
-              <div className="px-5 py-4 text-center">
-                <p className="text-[26px] font-bold font-mono text-white">{currentMatch.transition}%</p>
-                <p className="text-label text-white/25 mt-1">TRANSICIÓN</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Advanced Interactive Heatmaps (Cancha & Red) */}
-          <AdvancedHeatmapDashboard rallies={(currentMatch as any).rallies || []} />
-
-          {/* Fundament tabs + chart */}
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg overflow-hidden">
-            <div className="border-b border-white/[0.06] flex gap-0 px-2">
-              {[
-                { key: 'attacks',   label: 'Ataque',    icon: Target   },
-                { key: 'serves',    label: 'Saque',     icon: Zap      },
-                { key: 'reception', label: 'Recepción', icon: Activity },
-                { key: 'blocks',    label: 'Bloqueo',   icon: Shield   },
-              ].map(({ key, label, icon: Icon }) => (
-                <button key={key}
-                  onClick={() => setSelectedFundament(key)}
-                  className={`flex items-center gap-1.5 px-4 py-3 text-label border-b-2 transition-colors ${
-                    selectedFundament === key
-                      ? 'border-[#A191FF] text-[#A191FF]'
-                      : 'border-transparent text-white/30 hover:text-white/60'
-                  }`}>
-                  <Icon size={12} />{label}
-                </button>
-              ))}
-            </div>
-            <div className="px-5 py-4 h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData(selectedFundament)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis dataKey="name" tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip {...CHART_TOOLTIP} />
-                  <Bar dataKey={fundDataKey[selectedFundament]} fill={FUNDAM_COLOR[selectedFundament]} radius={[3,3,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Individual KPI cards */}
-          <div>
-            <p className="text-[13px] font-semibold text-white mb-3">Rendimiento individual</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {currentMatch.players.map(player => {
-                const kpis = positionKPIs[player.position] || ['attacks'];
-                const posColor = POS_COLORS[player.position] || '#A191FF';
-                return (
-                  <div key={player.id} className="bg-white/[0.02] border border-white/[0.06] rounded-lg overflow-hidden">
-                    <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
-                      <p className="text-[13px] font-semibold text-white">{player.name}</p>
-                      <span className="text-label px-2 py-0.5 rounded-full"
-                        style={{ color: posColor, backgroundColor: `${posColor}15` }}>
-                        {player.position.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="px-4 py-3 space-y-3">
-                      {kpis.includes('attacks') && (
-                        <div>
-                          <p className="text-label text-white/25 flex items-center gap-1.5 mb-1.5"><Target size={10} />ATAQUE</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-white/[0.03] rounded p-2 text-center">
-                              <p className="text-[16px] font-bold font-mono text-white">{player.attacks.hitting.toFixed(1)}%</p>
-                              <p className="text-[10px] font-mono text-white/25">EFICACIA</p>
-                            </div>
-                            <div className="bg-white/[0.03] rounded p-2 text-center">
-                              <p className="text-[16px] font-bold font-mono text-white">{player.attacks.kills}/{player.attacks.attempts}</p>
-                              <p className="text-[10px] font-mono text-white/25">KILLS</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {kpis.includes('serves') && (
-                        <div>
-                          <p className="text-label text-white/25 flex items-center gap-1.5 mb-1.5"><Zap size={10} />SAQUE</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-white/[0.03] rounded p-2 text-center">
-                              <p className="text-[16px] font-bold font-mono text-white">{player.serves.aces}</p>
-                              <p className="text-[10px] font-mono text-white/25">ACES</p>
-                            </div>
-                            <div className="bg-white/[0.03] rounded p-2 text-center">
-                              <p className="text-[16px] font-bold font-mono text-white">{player.serves.errors}</p>
-                              <p className="text-[10px] font-mono text-white/25">ERRORES</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {kpis.includes('reception') && player.reception.attempts > 0 && (
-                        <div>
-                          <p className="text-label text-white/25 flex items-center gap-1.5 mb-1.5"><Activity size={10} />RECEPCIÓN</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-white/[0.03] rounded p-2 text-center">
-                              <p className="text-[16px] font-bold font-mono text-white">{player.reception.efficiency.toFixed(2)}</p>
-                              <p className="text-[10px] font-mono text-white/25">EFICIENCIA</p>
-                            </div>
-                            <div className="bg-white/[0.03] rounded p-2 text-center">
-                              <p className="text-[16px] font-bold font-mono text-white">{player.reception.perfect}/{player.reception.attempts}</p>
-                              <p className="text-[10px] font-mono text-white/25">PERFECTAS</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {kpis.includes('blocks') && (
-                        <div>
-                          <p className="text-label text-white/25 flex items-center gap-1.5 mb-1.5"><Shield size={10} />BLOQUEO</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-white/[0.03] rounded p-2 text-center">
-                              <p className="text-[16px] font-bold font-mono text-white">{player.blocks.stuffs}</p>
-                              <p className="text-[10px] font-mono text-white/25">DIRECTOS</p>
-                            </div>
-                            <div className="bg-white/[0.03] rounded p-2 text-center">
-                              <p className="text-[16px] font-bold font-mono text-white">{player.blocks.assists}</p>
-                              <p className="text-[10px] font-mono text-white/25">ASISTENCIAS</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }
