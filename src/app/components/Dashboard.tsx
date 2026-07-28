@@ -25,12 +25,29 @@ export function Dashboard() {
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const totalPlayers        = safePlayers.length;
-  const activeInjuries      = 0;
-  const averageLoad         = 7.2;
-  const sideOutPercentage   = 65.8;
+  const activeInjuries      = safePlayers.filter(p => p.status === 'Lesionado' || p.status === 'Lesionada').length;
+  
+  let sideOutChances = 0;
+  let sideOutSuccess = 0;
+  
+  safeMatches.forEach(m => {
+    if (m.rallies) {
+      m.rallies.forEach(r => {
+         const hasOurServe = r.actions?.some(a => a.gesture?.toLowerCase() === 'saque' && a.playerId);
+         if (!hasOurServe) {
+           sideOutChances++;
+           if (r.winner === 'our') sideOutSuccess++;
+         }
+      });
+    }
+  });
+
+  const sideOutPercentage   = sideOutChances > 0 ? Math.round((sideOutSuccess/sideOutChances)*100) : 0;
+  const averageLoad         = 0; 
+  
   const availablePercentage = totalPlayers > 0
     ? Math.round(((totalPlayers - activeInjuries) / totalPlayers) * 100)
-    : 100;
+    : 0;
 
   // ── Position stats ────────────────────────────────────────────────────────
   const positionGroups = safePlayers.reduce<Record<string, typeof safePlayers>>((acc, p) => {
@@ -39,18 +56,18 @@ export function Dashboard() {
     return acc;
   }, {});
 
-  const POSITION_META: Record<string, { metric: number; label: string; status: string }> = {
-    Colocador: { metric: 67.3, label: "Side-Out",  status: "good"      },
-    Líbero:    { metric: 2.4,  label: "Recepción", status: "excellent" },
-    Central:   { metric: 52.1, label: "Ataque %",  status: "good"      },
-    Opuesto:   { metric: 45.2, label: "Ataque %",  status: "good"      },
-    Punta:     { metric: 38.7, label: "Ataque %",  status: "warning"   },
+  const POSITION_META: Record<string, { metric: number | string; label: string; status: string }> = {
+    Colocador: { metric: "-", label: "Side-Out",  status: "good"      },
+    Líbero:    { metric: "-", label: "Recepción", status: "excellent" },
+    Central:   { metric: "-", label: "Ataque %",  status: "good"      },
+    Opuesto:   { metric: "-", label: "Ataque %",  status: "good"      },
+    Punta:     { metric: "-", label: "Ataque %",  status: "warning"   },
   };
 
   const positionStats = Object.entries(positionGroups).map(([position, list]) => ({
     position,
     count: list.length,
-    ...(POSITION_META[position] ?? { metric: 40.0, label: "Rendimiento", status: "good" }),
+    ...(POSITION_META[position] ?? { metric: "-", label: "Rendimiento", status: "good" }),
   }));
 
   // ── Recent matches ────────────────────────────────────────────────────────
@@ -65,13 +82,16 @@ export function Dashboard() {
     }));
 
   // ── Alerts ────────────────────────────────────────────────────────────────
-  const alerts: { message: string; severity: "high" | "medium" | "low" }[] = [
-    ...(safePlayers.length > 0
-      ? [{ message: `Monitorear carga de ${safePlayers[0]?.name || "jugadora"}`, severity: "medium" as const }]
-      : []),
-    { message: "Eficacia de ataque baja en rotación 4",     severity: "medium" },
-    { message: "Revisar carga de entrenamiento del equipo", severity: "medium" },
-  ];
+  const alerts: { message: string; severity: "high" | "medium" | "low" }[] = [];
+  if (totalPlayers === 0) {
+    alerts.push({ message: "No tienes jugadoras registradas. Ve a la pestaña 'Jugadores'.", severity: "high" });
+  } else if (safeMatches.length === 0) {
+    alerts.push({ message: "No has registrado partidos. Ve a la pestaña 'En Vivo'.", severity: "medium" });
+  } else {
+    if (activeInjuries > 0) alerts.push({ message: `Atención: Tienes ${activeInjuries} jugadoras con molestias/lesiones`, severity: "high" });
+    if (sideOutPercentage > 0 && sideOutPercentage < 40) alerts.push({ message: "Eficacia de Side-Out baja en últimos partidos", severity: "medium" });
+    if (alerts.length === 0) alerts.push({ message: "El equipo se encuentra en óptimas condiciones", severity: "low" });
+  }
 
   const alertColor = (s: string) =>
     s === "high" ? "#FF919F" : s === "medium" ? "#FFD391" : "#91CAFF";

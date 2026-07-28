@@ -6,7 +6,7 @@ const C = {
   surface: '#11141a',
   courtBg: '#1a2235',
   courtLine: '#2e4a72',
-  accent: '#00e5ff',
+  accent: '#A191FF',
   accent2: '#ff6b35',
   text: '#e8eaf0',
   muted: '#5a6070',

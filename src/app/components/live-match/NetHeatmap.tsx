@@ -6,7 +6,7 @@ const C = {
   surface: '#11141a',
   netBg: '#1a2235',
   netLine: '#2e4a72',
-  accent: '#00e5ff', // Cyan for our team
+  accent: '#A191FF', // Cyan for our team
   accent2: '#ff6b35', // Orange for rival penetrations
   text: '#e8eaf0',
   muted: '#5a6070',
@@ -190,10 +190,10 @@ export function NetHeatmap({ impacts = [], mode = 'view', onCapture, width = 300
       <div style={{ position: 'absolute', left: 20, right: 20, top: 40, height: 10, background: 'rgba(255,255,255,0.8)', zIndex: 4, borderTop: '2px solid white', borderBottom: '1px solid rgba(0,0,0,0.2)' }} />
 
       {/* Left Antenna */}
-      <div style={{ position: 'absolute', left: 20, top: 0, bottom: 0, width: 6, background: 'repeating-linear-gradient(to bottom, #ff1100, #ff1100 20px, white 20px, white 40px)', zIndex: 5, boxShadow: '2px 0 5px rgba(0,0,0,0.5)', borderRadius: 3 }} />
+      <div style={{ position: 'absolute', left: 20, top: 0, bottom: 0, width: 6, background: 'repeating-linear-gradient(to bottom, #FF919F, #FF919F 20px, white 20px, white 40px)', zIndex: 5, boxShadow: '2px 0 5px rgba(0,0,0,0.5)', borderRadius: 3 }} />
       
       {/* Right Antenna */}
-      <div style={{ position: 'absolute', right: 20, top: 0, bottom: 0, width: 6, background: 'repeating-linear-gradient(to bottom, #ff1100, #ff1100 20px, white 20px, white 40px)', zIndex: 5, boxShadow: '-2px 0 5px rgba(0,0,0,0.5)', borderRadius: 3 }} />
+      <div style={{ position: 'absolute', right: 20, top: 0, bottom: 0, width: 6, background: 'repeating-linear-gradient(to bottom, #FF919F, #FF919F 20px, white 20px, white 40px)', zIndex: 5, boxShadow: '-2px 0 5px rgba(0,0,0,0.5)', borderRadius: 3 }} />
 
       {/* Zones indicators (P4, P3, P2 in mirror) */}
       <div style={{ position: 'absolute', left: 26, right: 26, bottom: 10, display: 'flex', justifyContent: 'space-around', zIndex: 6, opacity: 0.3, pointerEvents: 'none' }}>

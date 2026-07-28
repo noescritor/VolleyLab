@@ -199,11 +199,19 @@ class SupabaseService {
 
     if (gpError || !ghostPlayer) throw gpError;
 
+    // Fetch default team if not provided
+    let teamId = rosterData.team_id;
+    if (!teamId) {
+      const teams = await this.getTeams();
+      if (teams.length > 0) teamId = teams[0].id;
+    }
+
     // 2. Add to Roster
     const { data: roster, error: rosterError } = await this.supabase
       .from('club_roster')
       .insert({
         org_id: orgId,
+        team_id: teamId,
         player_id: ghostPlayer.id,
         status: 'active',
         ...rosterData
@@ -265,10 +273,17 @@ class SupabaseService {
   async createMatch(matchData: any) {
     const orgId = await this.getUserOrg();
     if (!orgId) throw new Error('No org context');
+    
+    // Fetch default team if not provided in matchData
+    let teamId = matchData.team_id;
+    if (!teamId) {
+      const teams = await this.getTeams();
+      if (teams.length > 0) teamId = teams[0].id;
+    }
 
     const { data, error } = await this.supabase
       .from('matches')
-      .insert({ ...matchData, org_id: orgId })
+      .insert({ ...matchData, org_id: orgId, team_id: teamId })
       .select()
       .single();
 

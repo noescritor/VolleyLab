@@ -10,14 +10,14 @@ const C = {
   bd:    "rgba(255,255,255,0.15)",
   bdMed: "rgba(255,255,255,0.25)",
 
-  vt: "#7F77DD", vtLt: "#CECBF6",
+  vt: "#A191FF", vtLt: "#CECBF6",
   vtBg: "rgba(127,119,221,0.15)",
   vtBd: "rgba(127,119,221,0.45)",
 
-  gn: "#1D9E75", gnLt: "#9FE1CB",
+  gn: "#91FFB0", gnLt: "#9FE1CB",
   gnBg: "rgba(29,158,117,0.13)",
 
-  rd: "#D85A30", rdLt: "#F0997B",
+  rd: "#FF919F", rdLt: "#F0997B",
   rdBg: "rgba(216,90,48,0.13)",
 
   gyBd: "rgba(255,255,255,0.25)",
@@ -495,6 +495,9 @@ export default function LiveMatchCenter() {
   const [allRallies, setAllRallies] = useState<any[]>([]);
   // We keep a timeline of events (timeouts, rallies)
   const [timeline, setTimeline] = useState<any[]>([]);
+  
+  const [isSaving, setIsSaving] = useState(false);
+  const [setsScores, setSetsScores] = useState<{our: number, rival: number}[]>([]);
 
   /* — Current Rally state (Punto Activo) — */
   const [currentRallyActions, setCurrentRallyActions] = useState<any[]>([]);
@@ -566,6 +569,7 @@ export default function LiveMatchCenter() {
     setSelP(nums[0] || null);
     setHist([]); setMsg("");
     setOurScore(0); setRivalScore(0); 
+    if (setNum === 1) setSetsScores([]);
     setSubsUsed(0); setOurTimeouts(0); setRivalTimeouts(0);
     setCurrentRallyActions([]);
     setScreen("live");
@@ -712,18 +716,31 @@ export default function LiveMatchCenter() {
 
   /* ── END SET & MATCH ── */
   const endSet = () => {
+    setSetsScores(prev => [...prev, { our: ourScore, rival: rivalScore }]);
     setPrevLu(dc(lineup));
     setLineup({ p1:null, p2:null, p3:null, p4:null, p5:null, p6:null });
     setSetNum(n => n + 1);
     setEditZone(null);
+    setOurScore(0);
+    setRivalScore(0);
     setScreen("lineup");
   };
 
   const endMatch = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
     setMsg("Guardando partido...");
     
-    const scoreStr = `${ourScore}-${rivalScore}`;
-    const resultStr = ourScore > rivalScore ? 'W' : 'L';
+    const finalSets = [...setsScores, { our: ourScore, rival: rivalScore }];
+    const scoreStr = finalSets.map(s => `${s.our}-${s.rival}`).join(', ');
+    
+    let ourSets = 0;
+    let rivalSets = 0;
+    finalSets.forEach(s => {
+      if (s.our > s.rival) ourSets++;
+      else if (s.rival > s.our) rivalSets++;
+    });
+    const resultStr = ourSets > rivalSets ? 'W' : (rivalSets > ourSets ? 'L' : 'D');
 
     try {
       await createMatch({
@@ -741,13 +758,16 @@ export default function LiveMatchCenter() {
         setScreen("setup");
         setAllRallies([]);
         setTimeline([]);
+        setSetsScores([]);
         setOurScore(0);
         setRivalScore(0);
         setSetNum(1);
         setMsg("");
+        setIsSaving(false);
       }, 1500);
     } catch (err) {
       setMsg("Error guardando");
+      setIsSaving(false);
       console.error(err);
     }
   };

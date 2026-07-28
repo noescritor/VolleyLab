@@ -57,19 +57,19 @@ export function AdvancedHeatmapDashboard({ rallies }: AdvancedHeatmapDashboardPr
         <div className="absolute top-4 left-4 flex gap-1 bg-[#0a0c10] p-1 rounded-md border border-[#2e4a72]/30">
           <button 
             onClick={() => setActiveTab('ataques')}
-            className={`px-3 py-1.5 text-[10px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'ataques' ? 'bg-[#00e5ff] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}
+            className={`px-3 py-1.5 text-[10px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'ataques' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}
           >
             Ataques
           </button>
           <button 
             onClick={() => setActiveTab('saques')}
-            className={`px-3 py-1.5 text-[10px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'saques' ? 'bg-[#00e5ff] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}
+            className={`px-3 py-1.5 text-[10px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'saques' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}
           >
             Saques
           </button>
           <button 
             onClick={() => setActiveTab('bloqueos')}
-            className={`px-3 py-1.5 text-[10px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'bloqueos' ? 'bg-[#00e5ff] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}
+            className={`px-3 py-1.5 text-[10px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'bloqueos' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}
           >
             Bloqueos (Red)
           </button>
@@ -93,14 +93,14 @@ export function AdvancedHeatmapDashboard({ rallies }: AdvancedHeatmapDashboardPr
       {/* Stats Panel */}
       <div className="w-full md:w-64 p-5 flex flex-col gap-6 bg-[#0a0c10]/50">
         <div>
-          <h3 className="text-[9px] tracking-[0.2em] uppercase text-[#00e5ff] mb-4">// Estadísticas de {activeTab}</h3>
+          <h3 className="text-[9px] tracking-[0.2em] uppercase text-[#A191FF] mb-4">// Estadísticas de {activeTab}</h3>
           <div className="flex justify-between items-center py-2 border-b border-[#2e4a72]/30">
             <span className="text-[11px] text-[#5a6070] tracking-wider">Total impactos</span>
             <span className="text-[14px] text-white font-medium">{activeImpacts.length}</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b border-[#2e4a72]/30">
             <span className="text-[11px] text-[#5a6070] tracking-wider">Puntos a favor</span>
-            <span className="text-[14px] text-[#00e5ff] font-medium">
+            <span className="text-[14px] text-[#A191FF] font-medium">
               {activeImpacts.filter(i => i.type === 'our').length}
             </span>
           </div>
@@ -113,9 +113,9 @@ export function AdvancedHeatmapDashboard({ rallies }: AdvancedHeatmapDashboardPr
         </div>
 
         <div>
-          <h3 className="text-[9px] tracking-[0.2em] uppercase text-[#00e5ff] mb-4">// Escala de Intensidad</h3>
+          <h3 className="text-[9px] tracking-[0.2em] uppercase text-[#A191FF] mb-4">// Escala de Intensidad</h3>
           <div className="flex h-3.5 rounded overflow-hidden">
-            {['#0a0c10','#001a3d','#003380','#0066cc','#00b3ff','#00e5ff','#ffdd00','#ff6b35','#ff1100'].map(color => (
+            {['#0a0c10','#001a3d','#003380','#0066cc','#00b3ff','#A191FF','#FFD391','#ff6b35','#FF919F'].map(color => (
               <div key={color} style={{ background: color, flex: 1 }} />
             ))}
           </div>

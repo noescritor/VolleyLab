@@ -21,7 +21,7 @@ const POS_COLORS: Record<string, string> = {
 };
 
 const FUNDAM_COLOR: Record<string, string> = {
-  attacks: '#00e5ff', serves: '#ffdd00', reception: '#91FFB0', blocks: '#A191FF'
+  attacks: '#A191FF', serves: '#FFD391', reception: '#91FFB0', blocks: '#A191FF'
 };
 
 const fundDataKey: Record<string, string> = {
@@ -147,7 +147,7 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
         
         teamBalance[q]++;
         
-        if (g === 'ataque') {
+        if (g === 'ataque' || g === 'ataque ' || g === 'dejada') {
           s.attacks[q]++;
           s.attacks.attempts++;
           if (q === 'pos') s.attacks.kills++;
@@ -160,6 +160,16 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
         else if (g === 'bloqueo') {
           s.blocks[q]++;
           if (q === 'pos') s.blocks.stuffs++;
+        }
+        else if (g === 'recepción' || g === 'recepcion') {
+          s.receptions[q]++;
+          s.receptions.attempts++;
+        }
+        else if (g === 'defensa') {
+          s.digs[q]++;
+        }
+        else if (g === 'acomodo') {
+          s.sets[q]++;
         }
       }
     }
@@ -228,7 +238,7 @@ export function MatchAnalytics() {
   if (state.loading?.matches) {
     return (
       <div className="flex items-center justify-center py-16 gap-3">
-        <Loader2 size={18} className="animate-spin text-[#00e5ff]" />
+        <Loader2 size={18} className="animate-spin text-[#A191FF]" />
         <span className="text-[13px] text-white/40">Cargando partidos…</span>
       </div>
     );
@@ -265,7 +275,7 @@ export function MatchAnalytics() {
         </Select>
 
         <button onClick={() => setIsDialogOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#00e5ff] hover:bg-[#00e5ff]/80 text-black text-label font-semibold rounded-lg transition-colors w-full md:w-auto justify-center">
+          className="flex items-center gap-2 px-4 py-2 bg-[#A191FF] hover:bg-[#A191FF]/80 text-black text-label font-semibold rounded-lg transition-colors w-full md:w-auto justify-center">
           <Plus size={14} />Nuevo Partido
         </button>
       </div>
@@ -275,7 +285,7 @@ export function MatchAnalytics() {
         <div className="py-12 text-center border border-dashed border-[#2e4a72]/50 rounded-lg">
           <p className="text-[13px] text-[#5a6070] mb-4">Sin partidos registrados.</p>
           <button onClick={() => setIsDialogOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#00e5ff] hover:bg-[#00e5ff]/80 text-black text-label font-semibold rounded-lg transition-colors mx-auto">
+            className="flex items-center gap-2 px-4 py-2 bg-[#A191FF] hover:bg-[#A191FF]/80 text-black text-label font-semibold rounded-lg transition-colors mx-auto">
             <Plus size={14} />Crear primer partido
           </button>
         </div>
@@ -288,15 +298,15 @@ export function MatchAnalytics() {
           <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg overflow-hidden shadow-[0_0_15px_rgba(0,229,255,0.05)]">
             <div className="px-5 py-4 flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-[#00e5ff] tracking-widest uppercase mb-1">{dynStats.match.matchType || 'Oficial'}</p>
+                <p className="text-[10px] text-[#A191FF] tracking-widest uppercase mb-1">{dynStats.match.matchType || 'Oficial'}</p>
                 <p className="text-[18px] font-semibold text-white">vs {dynStats.match.opponent}</p>
               </div>
               <div className="flex flex-col items-end gap-1">
                 <span className="text-[24px] font-mono font-bold text-white leading-none">{dynStats.match.score || '0-0'}</span>
                 <span className="text-[10px] tracking-wider px-2 py-0.5 rounded border uppercase"
                   style={dynStats.match.result === 'W'
-                    ? { color: '#00e5ff', borderColor: '#00e5ff', backgroundColor: 'rgba(0,229,255,0.05)' }
-                    : { color: '#ff1100', borderColor: '#ff1100', backgroundColor: 'rgba(255,17,0,0.05)' }}>
+                    ? { color: '#A191FF', borderColor: '#A191FF', backgroundColor: 'rgba(0,229,255,0.05)' }
+                    : { color: '#FF919F', borderColor: '#FF919F', backgroundColor: 'rgba(255,17,0,0.05)' }}>
                   {dynStats.match.result === 'W' ? 'Victoria' : 'Derrota'}
                 </span>
               </div>
@@ -305,16 +315,16 @@ export function MatchAnalytics() {
 
           {/* Custom Tabs Navigation */}
           <div className="flex gap-1 bg-[#11141a] p-1 rounded-lg border border-[#2e4a72]/30 w-fit">
-            <button onClick={() => setActiveTab('heatmaps')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'heatmaps' ? 'bg-[#00e5ff] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+            <button onClick={() => setActiveTab('heatmaps')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'heatmaps' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
               Resumen & Heatmaps
             </button>
-            <button onClick={() => setActiveTab('efficiency')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'efficiency' ? 'bg-[#00e5ff] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+            <button onClick={() => setActiveTab('efficiency')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'efficiency' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
               Análisis de Eficiencia
             </button>
-            <button onClick={() => setActiveTab('kpis')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'kpis' ? 'bg-[#00e5ff] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+            <button onClick={() => setActiveTab('kpis')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'kpis' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
               KPIs Individuales
             </button>
-            <button onClick={() => setActiveTab('timeline')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'timeline' ? 'bg-[#00e5ff] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+            <button onClick={() => setActiveTab('timeline')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'timeline' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
               Línea de Tiempo
             </button>
           </div>
@@ -325,16 +335,16 @@ export function MatchAnalytics() {
               {/* Momentum Line Chart */}
               {dynStats.momentum.length > 1 && (
                 <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
-                  <p className="text-[12px] font-semibold text-[#00e5ff] uppercase tracking-widest mb-4">Momentum del Partido (Diferencia de Puntos)</p>
+                  <p className="text-[12px] font-semibold text-[#A191FF] uppercase tracking-widest mb-4">Momentum del Partido (Diferencia de Puntos)</p>
                   <div className="h-40">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={dynStats.momentum} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#2e4a72" opacity={0.3} />
                         <XAxis dataKey="name" tick={{ fill: '#5a6070', fontSize: 10 }} axisLine={false} tickLine={false} minTickGap={20} />
                         <YAxis tick={{ fill: '#5a6070', fontSize: 10 }} axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={{ backgroundColor: '#0a0c10', border: '1px solid #2e4a72', borderRadius: '8px' }} labelStyle={{ color: '#00e5ff', marginBottom: '4px' }} itemStyle={{ color: '#fff', fontSize: '12px' }} />
+                        <Tooltip contentStyle={{ backgroundColor: '#0a0c10', border: '1px solid #2e4a72', borderRadius: '8px' }} labelStyle={{ color: '#A191FF', marginBottom: '4px' }} itemStyle={{ color: '#fff', fontSize: '12px' }} />
                         <ReferenceLine y={0} stroke="#5a6070" strokeWidth={1} />
-                        <Line type="monotone" dataKey="diff" name="Diferencia" stroke="#00e5ff" strokeWidth={3} dot={{ r: 2, fill: '#00e5ff' }} activeDot={{ r: 5, fill: '#fff' }} />
+                        <Line type="monotone" dataKey="diff" name="Diferencia" stroke="#A191FF" strokeWidth={3} dot={{ r: 2, fill: '#A191FF' }} activeDot={{ r: 5, fill: '#fff' }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -352,7 +362,7 @@ export function MatchAnalytics() {
               
               {/* Team Balance Bar */}
               <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
-                <p className="text-[12px] font-semibold text-[#00e5ff] uppercase tracking-widest mb-4">Balance General del Equipo</p>
+                <p className="text-[12px] font-semibold text-[#A191FF] uppercase tracking-widest mb-4">Balance General del Equipo</p>
                 
                 <div className="flex h-6 rounded-full overflow-hidden mb-3 bg-black">
                   {(() => {
@@ -363,18 +373,18 @@ export function MatchAnalytics() {
                     const nPct = (dynStats.teamBalance.neg / t) * 100;
                     return (
                       <>
-                        <div style={{ width: `${pPct}%` }} className="bg-[#00e5ff] transition-all duration-500" title={`Positivos: ${pPct.toFixed(1)}%`} />
-                        <div style={{ width: `${ePct}%` }} className="bg-[#ffdd00] transition-all duration-500" title={`Neutros: ${ePct.toFixed(1)}%`} />
-                        <div style={{ width: `${nPct}%` }} className="bg-[#ff1100] transition-all duration-500" title={`Negativos: ${nPct.toFixed(1)}%`} />
+                        <div style={{ width: `${pPct}%` }} className="bg-[#A191FF] transition-all duration-500" title={`Positivos: ${pPct.toFixed(1)}%`} />
+                        <div style={{ width: `${ePct}%` }} className="bg-[#FFD391] transition-all duration-500" title={`Neutros: ${ePct.toFixed(1)}%`} />
+                        <div style={{ width: `${nPct}%` }} className="bg-[#FF919F] transition-all duration-500" title={`Negativos: ${nPct.toFixed(1)}%`} />
                       </>
                     );
                   })()}
                 </div>
                 
                 <div className="flex justify-between items-center text-[11px] font-mono">
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#00e5ff]"></div><span className="text-white">{dynStats.teamBalance.pos} Positivos</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#ffdd00]"></div><span className="text-white">{dynStats.teamBalance.neu} Neutros</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#ff1100]"></div><span className="text-white">{dynStats.teamBalance.neg} Errores</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#A191FF]"></div><span className="text-white">{dynStats.teamBalance.pos} Positivos</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#FFD391]"></div><span className="text-white">{dynStats.teamBalance.neu} Neutros</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#FF919F]"></div><span className="text-white">{dynStats.teamBalance.neg} Errores</span></div>
                 </div>
               </div>
 
@@ -404,16 +414,16 @@ export function MatchAnalytics() {
                             <p className="text-[10px] text-[#5a6070]">{p.position}</p>
                           </td>
                           <td className="px-4 py-3 text-center font-mono text-[12px]">
-                            <span className="text-[#00e5ff]">{p.attacks.pos}</span> / <span className="text-[#ffdd00]">{p.attacks.neu}</span> / <span className="text-[#ff1100]">{p.attacks.neg}</span>
+                            <span className="text-[#A191FF]">{p.attacks.pos}</span> / <span className="text-[#FFD391]">{p.attacks.neu}</span> / <span className="text-[#FF919F]">{p.attacks.neg}</span>
                           </td>
                           <td className="px-4 py-3 text-center font-mono text-[12px]">
-                            <span className="text-[#00e5ff]">{p.serves.pos}</span> / <span className="text-[#ffdd00]">{p.serves.neu}</span> / <span className="text-[#ff1100]">{p.serves.neg}</span>
+                            <span className="text-[#A191FF]">{p.serves.pos}</span> / <span className="text-[#FFD391]">{p.serves.neu}</span> / <span className="text-[#FF919F]">{p.serves.neg}</span>
                           </td>
                           <td className="px-4 py-3 text-center font-mono text-[12px]">
-                            <span className="text-[#00e5ff]">{p.receptions.pos}</span> / <span className="text-[#ffdd00]">{p.receptions.neu}</span> / <span className="text-[#ff1100]">{p.receptions.neg}</span>
+                            <span className="text-[#A191FF]">{p.receptions.pos}</span> / <span className="text-[#FFD391]">{p.receptions.neu}</span> / <span className="text-[#FF919F]">{p.receptions.neg}</span>
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`text-[12px] font-mono font-semibold px-2 py-1 rounded ${Number(eff) > 0 ? 'bg-[#00e5ff]/10 text-[#00e5ff]' : Number(eff) < 0 ? 'bg-[#ff1100]/10 text-[#ff1100]' : 'bg-white/5 text-white/50'}`}>
+                            <span className={`text-[12px] font-mono font-semibold px-2 py-1 rounded ${Number(eff) > 0 ? 'bg-[#A191FF]/10 text-[#A191FF]' : Number(eff) < 0 ? 'bg-[#FF919F]/10 text-[#FF919F]' : 'bg-white/5 text-white/50'}`}>
                               {Number(eff) > 0 ? '+' : ''}{eff}%
                             </span>
                           </td>
@@ -438,7 +448,7 @@ export function MatchAnalytics() {
               {/* General KPIs */}
               <div className="grid grid-cols-2 divide-x divide-[#2e4a72]/50 bg-[#11141a] border border-[#2e4a72]/50 rounded-lg">
                 <div className="px-5 py-4 text-center">
-                  <p className="text-[26px] font-bold font-mono text-[#00e5ff]">{dynStats.sideOutPct}%</p>
+                  <p className="text-[26px] font-bold font-mono text-[#A191FF]">{dynStats.sideOutPct}%</p>
                   <p className="text-[10px] uppercase tracking-widest text-[#5a6070] mt-1">Side-Out</p>
                 </div>
                 <div className="px-5 py-4 text-center">
@@ -460,7 +470,7 @@ export function MatchAnalytics() {
                       onClick={() => setSelectedFundament(key)}
                       className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-mono uppercase tracking-wider border-b-2 transition-colors ${
                         selectedFundament === key
-                          ? 'border-[#00e5ff] text-[#00e5ff]'
+                          ? 'border-[#A191FF] text-[#A191FF]'
                           : 'border-transparent text-[#5a6070] hover:text-white'
                       }`}>
                       <Icon size={12} />{label}
@@ -474,7 +484,7 @@ export function MatchAnalytics() {
                       <XAxis dataKey="name" tick={{ fill: '#5a6070', fontSize: 11 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: '#5a6070', fontSize: 11 }} axisLine={false} tickLine={false} />
                       <Tooltip {...CHART_TOOLTIP} />
-                      <Bar dataKey={fundDataKey[selectedFundament]} fill={FUNDAM_COLOR[selectedFundament] || '#00e5ff'} radius={[3,3,0,0]} />
+                      <Bar dataKey={fundDataKey[selectedFundament]} fill={FUNDAM_COLOR[selectedFundament] || '#A191FF'} radius={[3,3,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -517,11 +527,11 @@ export function MatchAnalytics() {
                             <p className="text-[9px] uppercase tracking-widest text-[#5a6070] flex items-center gap-1.5 mb-1.5"><Zap size={10} />Saque</p>
                             <div className="grid grid-cols-2 gap-2">
                               <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
-                                <p className="text-[16px] font-bold font-mono text-[#00e5ff]">{player.serves.pos}</p>
+                                <p className="text-[16px] font-bold font-mono text-[#A191FF]">{player.serves.pos}</p>
                                 <p className="text-[9px] font-mono text-[#5a6070]">ACES</p>
                               </div>
                               <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
-                                <p className="text-[16px] font-bold font-mono text-[#ff1100]">{player.serves.neg}</p>
+                                <p className="text-[16px] font-bold font-mono text-[#FF919F]">{player.serves.neg}</p>
                                 <p className="text-[9px] font-mono text-[#5a6070]">ERRORES</p>
                               </div>
                             </div>
@@ -538,7 +548,7 @@ export function MatchAnalytics() {
                                 <p className="text-[9px] font-mono text-[#5a6070]">EFICIENCIA</p>
                               </div>
                               <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
-                                <p className="text-[16px] font-bold font-mono text-[#00e5ff]">{player.receptions.pos}/{player.receptions.attempts}</p>
+                                <p className="text-[16px] font-bold font-mono text-[#A191FF]">{player.receptions.pos}/{player.receptions.attempts}</p>
                                 <p className="text-[9px] font-mono text-[#5a6070]">PERFECTAS</p>
                               </div>
                             </div>
@@ -557,7 +567,7 @@ export function MatchAnalytics() {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               
               <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
-                <p className="text-[12px] font-semibold text-[#00e5ff] uppercase tracking-widest mb-4">Frecuencia de Errores por Fase de Set</p>
+                <p className="text-[12px] font-semibold text-[#A191FF] uppercase tracking-widest mb-4">Frecuencia de Errores por Fase de Set</p>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={dynStats.errorPhaseFreq} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -565,8 +575,8 @@ export function MatchAnalytics() {
                       <XAxis dataKey="name" tick={{ fill: '#5a6070', fontSize: 11 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: '#5a6070', fontSize: 11 }} axisLine={false} tickLine={false} />
                       <Tooltip {...CHART_TOOLTIP} />
-                      <Bar dataKey="Saque" stackId="a" fill="#ffdd00" name="Errores de Saque" />
-                      <Bar dataKey="Ataque" stackId="a" fill="#00e5ff" name="Errores de Ataque/Dejada" />
+                      <Bar dataKey="Saque" stackId="a" fill="#FFD391" name="Errores de Saque" />
+                      <Bar dataKey="Ataque" stackId="a" fill="#A191FF" name="Errores de Ataque/Dejada" />
                       <Bar dataKey="Recepcion" stackId="a" fill="#91FFB0" name="Errores de Recepción" />
                       <Bar dataKey="Bloqueo" stackId="a" fill="#A191FF" name="Errores de Bloqueo" />
                     </BarChart>
@@ -576,27 +586,27 @@ export function MatchAnalytics() {
 
               {dynStats.match.timeline && dynStats.match.timeline.length > 0 && (
                 <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
-                  <p className="text-[12px] font-semibold text-[#00e5ff] uppercase tracking-widest mb-4">Línea de Tiempo del Partido</p>
+                  <p className="text-[12px] font-semibold text-[#A191FF] uppercase tracking-widest mb-4">Línea de Tiempo del Partido</p>
                   <div className="space-y-3 pl-2 border-l border-[#2e4a72]/30">
                     {dynStats.match.timeline.map((evt: any, i: number) => (
                       <div key={i} className="relative pl-4">
-                        <div className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-[#00e5ff]"></div>
+                        <div className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-[#A191FF]"></div>
                         <p className="text-[11px] text-[#5a6070] font-mono mb-1">
                           {evt.type === 'timeout' ? 'TIEMPO FUERA' : evt.type === 'sub' ? 'CAMBIO' : 'RALLY'}
                         </p>
                         {evt.type === 'timeout' && (
                           <p className="text-[13px] text-white">
-                            Tiempo pedido por <span className={evt.team === 'our' ? 'text-[#00e5ff]' : 'text-[#ff1100]'}>{evt.team === 'our' ? 'Nosotros' : 'Rival'}</span> (Marcador: {evt.ourScore}-{evt.rivalScore})
+                            Tiempo pedido por <span className={evt.team === 'our' ? 'text-[#A191FF]' : 'text-[#FF919F]'}>{evt.team === 'our' ? 'Nosotros' : 'Rival'}</span> (Marcador: {evt.ourScore}-{evt.rivalScore})
                           </p>
                         )}
                         {evt.type === 'sub' && (
                           <p className="text-[13px] text-white">
-                            Entra <span className="text-[#00e5ff]">{evt.in}</span> x Sale <span className="text-[#5a6070]">{evt.out}</span>
+                            Entra <span className="text-[#A191FF]">{evt.in}</span> x Sale <span className="text-[#5a6070]">{evt.out}</span>
                           </p>
                         )}
                         {evt.type === 'rally' && evt.data && (
                           <p className="text-[13px] text-white">
-                            Punto para <span className={evt.data.winner === 'our' ? 'text-[#00e5ff]' : 'text-[#ff1100]'}>{evt.data.winner === 'our' ? 'Nosotros' : 'Rival'}</span> 
+                            Punto para <span className={evt.data.winner === 'our' ? 'text-[#A191FF]' : 'text-[#FF919F]'}>{evt.data.winner === 'our' ? 'Nosotros' : 'Rival'}</span> 
                             {evt.data.actions && evt.data.actions.length > 0 && ` (${evt.data.actions.length} acciones)`}
                           </p>
                         )}
@@ -698,10 +708,10 @@ export function MatchAnalytics() {
                         <div key={player.id}
                           onClick={() => handlePlayerToggle(player.id)}
                           className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                            selected ? 'border-[#00e5ff]/40 bg-[#00e5ff]/5' : 'border-white/[0.08] hover:border-white/20'
+                            selected ? 'border-[#A191FF]/40 bg-[#A191FF]/5' : 'border-white/[0.08] hover:border-white/20'
                           }`}>
                           <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                            selected ? 'bg-[#00e5ff] border-[#00e5ff]' : 'border-white/20'
+                            selected ? 'bg-[#A191FF] border-[#A191FF]' : 'border-white/20'
                           }`}>
                             {selected && <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
                               <path d="M1 4l2.5 2.5L9 1" stroke="black" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -725,7 +735,7 @@ export function MatchAnalytics() {
                 Cancelar
               </button>
               <button type="submit" disabled={state.players.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-[#00e5ff] hover:bg-[#00e5ff]/80 text-black text-[12px] font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                className="flex items-center gap-2 px-4 py-2 bg-[#A191FF] hover:bg-[#A191FF]/80 text-black text-[12px] font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                 <Plus size={14} />Crear Partido
               </button>
             </div>
