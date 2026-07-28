@@ -12,7 +12,7 @@ interface PrintableMatchReportProps {
 export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMatchReportProps>(({ dynStats, match, players }, ref) => {
   if (!dynStats || !match) return null;
 
-  const { teamBalance, r: rallies, sideOutPct } = dynStats;
+  const { teamBalance, rallies, sideOutPct } = dynStats;
 
   // Re-calculate some stuff just for the PDF or rely on dynStats
   const totalBalance = teamBalance.pos + teamBalance.neu + teamBalance.neg;

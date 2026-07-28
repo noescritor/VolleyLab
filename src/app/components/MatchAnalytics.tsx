@@ -65,7 +65,9 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
       attacks: { pos: 0, neu: 0, neg: 0, kills: 0, attempts: 0 },
       serves: { pos: 0, neu: 0, neg: 0, aces: 0, errors: 0 },
       receptions: { pos: 0, neu: 0, neg: 0, perfect: 0, attempts: 0 },
-      blocks: { pos: 0, neu: 0, neg: 0, stuffs: 0 }
+      blocks: { pos: 0, neu: 0, neg: 0, stuffs: 0 },
+      digs: { pos: 0, neu: 0, neg: 0 },
+      sets: { pos: 0, neu: 0, neg: 0 }
     };
   });
 
