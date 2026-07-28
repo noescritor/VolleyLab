@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, ReferenceLine } from 'recharts';
@@ -196,6 +196,42 @@ export function MatchAnalytics() {
   const [activeTab, setActiveTab] = useState<'heatmaps'|'efficiency'|'kpis'|'timeline'>('efficiency');
   const [selectedFundament, setSelectedFundament] = useState('attacks');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const exportToPDF = async () => {
+    if (!printRef.current) return;
+    setIsExporting(true);
+    toast.info("Generando PDF, por favor espera...", { id: "pdf-toast" });
+    
+    try {
+      setTimeout(async () => {
+        if (!printRef.current) return;
+        const canvas = await html2canvas(printRef.current, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#0A0A0E'
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'px',
+          format: [794, 1123]
+        });
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, 794, 1123);
+        pdf.save(`Reporte_VolleyLab_${new Date().getTime()}.pdf`);
+        
+        toast.success("PDF generado exitosamente!", { id: "pdf-toast" });
+        setIsExporting(false);
+      }, 500);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al generar PDF", { id: "pdf-toast" });
+      setIsExporting(false);
+    }
+  };
 
   const [newMatchForm, setNewMatchForm] = useState({
     opponent: '', date: '', time: '', venue: '', matchType: 'regular', notes: '', selectedPlayers: [] as string[]
@@ -742,6 +778,10 @@ export function MatchAnalytics() {
           </form>
         </DialogContent>
       </Dialog>
+      {/* HIDDEN PRINTABLE REPORT */}
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+         {dynStats && <PrintableMatchReport ref={printRef} dynStats={dynStats} match={dynStats.match} players={dynStats.players} />}
+      </div>
     </div>
   );
 }
