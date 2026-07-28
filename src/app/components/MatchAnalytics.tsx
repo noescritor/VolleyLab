@@ -274,7 +274,7 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
 export function MatchAnalytics() {
   const { state, createMatch } = useApp();
   const [selectedMatch, setSelectedMatch] = useState('');
-  const [activeTab, setActiveTab] = useState<'heatmaps'|'efficiency'|'kpis'|'timeline'>('efficiency');
+  const [activeTab, setActiveTab] = useState<'heatmaps'|'efficiency'|'kpis'|'timeline'|'insights'>('efficiency');
   const [selectedFundament, setSelectedFundament] = useState('attacks');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -439,6 +439,9 @@ export function MatchAnalytics() {
             </button>
             <button onClick={() => setActiveTab('timeline')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'timeline' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
               Línea de Tiempo
+            </button>
+            <button onClick={() => setActiveTab('insights')} className={`flex items-center gap-2 px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'insights' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+              <Zap size={14} /> Insights
             </button>
           </div>
 
@@ -731,6 +734,91 @@ export function MatchAnalytics() {
 
             </div>
           )}
+
+          {/* TAB 5: INSIGHTS & IMPACT */}
+          {activeTab === 'insights' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              
+              <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp className="text-[#A191FF]" size={16} />
+                  <h3 className="text-[13px] font-semibold text-white">Impacto de Sustituciones</h3>
+                </div>
+                <div className="text-[13px] text-white/60 mb-6">
+                  {dynStats.subImpact ? `Rendimiento antes vs después del cambio: Entró ${dynStats.subImpact.subDetails.in} por ${dynStats.subImpact.subDetails.out}` : 'No se registraron cambios o no hay datos suficientes.'}
+                </div>
+                
+                {dynStats.subImpact && (
+                  <div className="flex gap-4">
+                    {/* Antes */}
+                    <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-lg p-5 relative overflow-hidden">
+                      <div className="font-mono text-[11px] tracking-[1.4px] text-[#FFAC91] mb-6">ANTES DEL CAMBIO</div>
+                      <div className="flex justify-between mt-4">
+                        <div>
+                          <div className="text-[24px] font-bold text-white">{dynStats.subImpact.before.balance > 0 ? `+${dynStats.subImpact.before.balance}` : dynStats.subImpact.before.balance}</div>
+                          <div className="font-mono text-[9px] tracking-[0.4px] text-white/45">BALANCE</div>
+                        </div>
+                        <div>
+                          <div className="text-[24px] font-bold text-white">{dynStats.subImpact.before.attEff}%</div>
+                          <div className="font-mono text-[9px] tracking-[0.4px] text-white/45">EFIC. ATAQUE</div>
+                        </div>
+                        <div>
+                          <div className="text-[24px] font-bold text-white">{dynStats.subImpact.before.recEff}%</div>
+                          <div className="font-mono text-[9px] tracking-[0.4px] text-white/45">EFIC. RECP</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Despues */}
+                    <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-lg p-5 relative overflow-hidden">
+                      <div className="font-mono text-[11px] tracking-[1.4px] text-[#91FFB0] mb-6">DESPUÉS DEL CAMBIO</div>
+                      <div className="flex justify-between mt-4">
+                        <div>
+                          <div className="text-[24px] font-bold text-white">{dynStats.subImpact.after.balance > 0 ? `+${dynStats.subImpact.after.balance}` : dynStats.subImpact.after.balance}</div>
+                          <div className="font-mono text-[9px] tracking-[0.4px] text-white/45">BALANCE</div>
+                        </div>
+                        <div>
+                          <div className="text-[24px] font-bold text-white">{dynStats.subImpact.after.attEff}%</div>
+                          <div className="font-mono text-[9px] tracking-[0.4px] text-white/45">EFIC. ATAQUE</div>
+                        </div>
+                        <div>
+                          <div className="text-[24px] font-bold text-white">{dynStats.subImpact.after.recEff}%</div>
+                          <div className="font-mono text-[9px] tracking-[0.4px] text-white/45">EFIC. RECP</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
+                <div className="flex items-center gap-2 mb-6">
+                  <Activity className="text-[#A191FF]" size={16} />
+                  <h3 className="text-[13px] font-semibold text-white">Proyección Histórica (Últimos 5 partidos)</h3>
+                </div>
+                
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-[140px] font-mono text-[10px] tracking-[0.4px] text-white/60">ESTE PARTIDO (SO%)</div>
+                    <div className="flex-1 h-[12px] bg-white/5 rounded-full relative overflow-hidden">
+                      <div className="h-full bg-[#91CAFF] rounded-full" style={{ width: `${dynStats.sideOutPct}%` }} />
+                    </div>
+                    <div className="w-[40px] text-right font-mono text-[11px] text-white">{dynStats.sideOutPct}%</div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="w-[140px] font-mono text-[10px] tracking-[0.4px] text-white/60">PROMEDIO HISTÓRICO</div>
+                    <div className="flex-1 h-[12px] bg-white/5 rounded-full relative overflow-hidden">
+                      <div className="h-full bg-white/40 rounded-full" style={{ width: `${dynStats.historicalAvg?.sideOut || 0}%` }} />
+                    </div>
+                    <div className="w-[40px] text-right font-mono text-[11px] text-white">{dynStats.historicalAvg?.sideOut || 0}%</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
         </>
       )}
 
