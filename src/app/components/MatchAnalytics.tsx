@@ -326,6 +326,7 @@ export function MatchAnalytics() {
             <Plus size={14} />Nuevo Partido
           </button>
         </div>
+      </div>
 
       {/* ── Empty state ──────────────────────────────────────────────────── */}
       {(!state.matches || state.matches.length === 0) && (
