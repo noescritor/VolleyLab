@@ -14,6 +14,15 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
 
   const { teamBalance, rallies, sideOutPct } = dynStats;
 
+  const PRINT_STYLES = `
+    @media print {
+      @page { size: A4 portrait; margin: 0 !important; }
+      html, body, #root { margin: 0 !important; padding: 0 !important; background: #0A0A0E !important; width: 100% !important; height: auto !important; }
+      .print\\:hidden { display: none !important; }
+      #pdf-preview-wrapper { display: block !important; position: absolute; left: 0; top: 0; width: 100%; z-index: 9999; }
+    }
+  `;
+
   // Re-calculate some stuff just for the PDF or rely on dynStats
   const totalBalance = teamBalance.pos + teamBalance.neu + teamBalance.neg;
   const posPct = totalBalance > 0 ? (teamBalance.pos / totalBalance) * 100 : 0;
@@ -30,9 +39,11 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
         color: '#FFFFFF',
         padding: '40px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        position: 'relative'
+        position: 'relative',
+        boxSizing: 'border-box'
       }}
     >
+      <style dangerouslySetInnerHTML={{ __html: PRINT_STYLES }} />
       {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '20px', marginBottom: '30px' }}>
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>

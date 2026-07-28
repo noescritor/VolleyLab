@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+
 import { Download, Loader2, Plus, Target, Shield, Zap, Activity, Calendar, MapPin, Users } from 'lucide-react';
 import { PrintableMatchReport } from './analytics/PrintableMatchReport';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -204,39 +203,27 @@ export function MatchAnalytics() {
   const [isExporting, setIsExporting] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  const exportToPDF = async () => {
-    if (!printRef.current) return;
-    setIsExporting(true);
-    toast.info("Generando PDF, por favor espera...", { id: "pdf-toast" });
+  const exportToPDF = () => {
+    if (!dynStats?.match) return;
     
-    setTimeout(async () => {
-      try {
-        if (!printRef.current) throw new Error("Referencia del reporte no encontrada");
-        
-        const canvas = await html2canvas(printRef.current, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#0A0A0E'
-        });
-        
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'px',
-          format: [794, 1123]
-        });
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, 794, 1123);
-        pdf.save(`Reporte_VolleyLab_${new Date().getTime()}.pdf`);
-        
-        toast.success("PDF generado exitosamente!", { id: "pdf-toast" });
-      } catch (err: any) {
-        console.error("PDF Error:", err);
-        toast.error("Error al generar PDF: " + (err.message || "Desconocido"), { id: "pdf-toast" });
-      } finally {
+    // Cambiar título temporalmente para que el navegador sugiera este nombre al guardar el PDF
+    const originalTitle = document.title;
+    const matchName = dynStats.match.opponent ? dynStats.match.opponent : 'Rival';
+    const matchDate = dynStats.match.date ? dynStats.match.date : 'Fecha';
+    document.title = `${matchName} - ${matchDate}`;
+    
+    setIsExporting(true);
+    
+    // Damos un pequeño respiro para que React actualice estados si es necesario
+    setTimeout(() => {
+      window.print();
+      
+      // Restauramos el título después de un pequeño retraso
+      setTimeout(() => {
+        document.title = originalTitle;
         setIsExporting(false);
-      }
-    }, 800); // Dar un poco más de tiempo para que rendericen los mapas
+      }, 500);
+    }, 100);
   };
 
   const [newMatchForm, setNewMatchForm] = useState({
@@ -318,9 +305,9 @@ export function MatchAnalytics() {
 
         <div className="flex items-center gap-2 w-full md:w-auto">
           <button onClick={exportToPDF} disabled={isExporting || state.matches.length === 0}
-            className="flex items-center gap-2 px-4 py-2 border border-white/[0.08] hover:bg-white/[0.04] text-white/70 text-label font-semibold rounded-lg transition-colors justify-center disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex items-center gap-2 px-4 py-2 border border-white/[0.08] hover:bg-white/[0.04] text-white/70 text-label font-semibold rounded-lg transition-colors justify-center disabled:opacity-40 disabled:cursor-not-allowed print:hidden">
             {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} 
-            {isExporting ? 'Generando...' : 'Exportar PDF'}
+            {isExporting ? 'Preparando...' : 'Exportar PDF'}
           </button>
           <button onClick={() => setIsDialogOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-[#A191FF] hover:bg-[#A191FF]/80 text-black text-label font-semibold rounded-lg transition-colors justify-center">
@@ -792,7 +779,7 @@ export function MatchAnalytics() {
         </DialogContent>
       </Dialog>
       {/* HIDDEN PRINTABLE REPORT */}
-      <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -100, opacity: 0.01, pointerEvents: 'none' }}>
+      <div id="pdf-preview-wrapper" className="hidden print:block absolute top-0 left-0 w-full bg-[#0A0A0E] z-[9999]">
          {dynStats && <PrintableMatchReport ref={printRef} dynStats={dynStats} match={dynStats.match} players={dynStats.players} />}
       </div>
     </div>

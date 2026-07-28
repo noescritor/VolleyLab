@@ -344,7 +344,7 @@ function AppContent() {
 
         {/* ── Desktop Sidebar ──────────────────────────────────────────────── */}
         <aside
-          className={['hidden md:flex flex-col shrink-0 border-r border-white/[0.06] transition-all duration-300 relative', sidebarCollapsed ? 'w-[60px]' : 'w-[220px]'].join(' ')}
+          className={['hidden md:flex flex-col shrink-0 border-r border-white/[0.06] transition-all duration-300 relative print:hidden', sidebarCollapsed ? 'w-[60px]' : 'w-[220px]'].join(' ')}
           style={{ background: 'rgba(255,255,255,0.01)' }}
         >
           <Sidebar {...sidebarProps} />
@@ -370,7 +370,7 @@ function AppContent() {
         {/* ── Main Area ────────────────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Mobile top bar */}
-          <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-white/[0.06] shrink-0"
+          <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-white/[0.06] shrink-0 print:hidden"
                style={{ background: 'rgba(255,255,255,0.01)' }}>
             <button onClick={() => setMobileOpen(true)} className="p-2 text-white/40 hover:text-white transition-colors">
               <Menu size={20} />
