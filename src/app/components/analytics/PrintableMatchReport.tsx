@@ -63,6 +63,30 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
     </>
   );
 
+  const courtImpacts = (rallies || [])
+    .filter((r: any) => r.impact && r.impact.plane === 'court')
+    .filter((r: any) => {
+      const gesture = r.actions && r.actions.length > 0 
+        ? r.actions[r.actions.length - 1]?.gesture?.toLowerCase()
+        : r.finalAction?.toLowerCase();
+      return gesture === 'ataque' || gesture === 'ataque '; // Solo ataques para la vista de la cancha
+    })
+    .map((r: any) => ({
+      x: r.impact.x,
+      y: r.impact.y,
+      weight: r.winner === 'our' ? 2 : 1,
+      type: r.winner
+    }));
+
+  const netImpacts = (rallies || [])
+    .filter((r: any) => r.impact && r.impact.plane === 'net')
+    .map((r: any) => ({
+      x: r.impact.x,
+      y: r.impact.y,
+      weight: r.winner === 'our' ? 2 : 1,
+      type: r.winner
+    }));
+
   return (
     <div ref={ref} style={{ backgroundColor: '#000000', color: '#FFFFFF', position: 'relative' }}>
       <style dangerouslySetInnerHTML={{ __html: PRINT_STYLES }} />
@@ -174,18 +198,18 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
            {momentum && momentum.length > 0 ? (
              <div className="w-full h-[140px] relative border-b border-white/10 mb-6">
                 <div className="absolute left-0 top-[50%] w-full h-[1px] bg-white/20 border-dashed" />
-                <svg width="100%" height="100%" preserveAspectRatio="none">
+                <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100">
                   <polyline
                     fill="none"
                     stroke="#A191FF"
-                    strokeWidth="3"
-                    points={momentum.map((m:any, i:number) => `${(i / Math.max(1, momentum.length - 1)) * 100}%,${50 - (m.diff * 5)}%`).join(' ')}
+                    strokeWidth="1"
+                    points={momentum.map((m:any, i:number) => `${(i / Math.max(1, momentum.length - 1)) * 100},${50 - (m.diff * 5)}`).join(' ')}
                   />
                   {/* Puntos de Sustitucion (mocked for visual if any) */}
                   {subImpact?.subDetails && momentum.findIndex((m:any)=>m.ourScore===subImpact.subDetails.ourScore && m.rivalScore===subImpact.subDetails.rivalScore) > -1 && (
                     <circle 
-                      cx={`${(momentum.findIndex((m:any)=>m.ourScore===subImpact.subDetails.ourScore && m.rivalScore===subImpact.subDetails.rivalScore) / Math.max(1, momentum.length - 1)) * 100}%`}
-                      cy="50%" r="4" fill="#FFAC91" 
+                      cx={`${(momentum.findIndex((m:any)=>m.ourScore===subImpact.subDetails.ourScore && m.rivalScore===subImpact.subDetails.rivalScore) / Math.max(1, momentum.length - 1)) * 100}`}
+                      cy="50" r="1.5" fill="#FFAC91" 
                     />
                   )}
                 </svg>
@@ -203,14 +227,14 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
         <div className="absolute left-[40px] top-[490px] w-[349px] h-[340px] glass-card p-6 overflow-hidden flex items-center justify-center">
           <div className="absolute left-6 top-6 font-mono text-[11px] tracking-[1.4px] text-[#91CAFF] z-10">ATAQUES EN CANCHA</div>
           <div className="transform scale-75 origin-center mt-8 relative z-0">
-            <CourtHeatmap rallies={rallies || []} />
+            <CourtHeatmap impacts={courtImpacts} />
           </div>
         </div>
 
         <div className="absolute left-[405px] top-[490px] w-[349px] h-[340px] glass-card p-6 overflow-hidden flex items-center justify-center">
           <div className="absolute left-6 top-6 font-mono text-[11px] tracking-[1.4px] text-[#91F2FF] z-10">ATAQUES EN RED (TRAYECTORIA)</div>
           <div className="transform scale-[0.6] origin-center mt-8 relative z-0 w-[400px]">
-            <NetHeatmap rallies={rallies || []} />
+            <NetHeatmap impacts={netImpacts} />
           </div>
         </div>
       </div>
