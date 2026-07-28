@@ -209,9 +209,10 @@ export function MatchAnalytics() {
     setIsExporting(true);
     toast.info("Generando PDF, por favor espera...", { id: "pdf-toast" });
     
-    try {
-      setTimeout(async () => {
-        if (!printRef.current) return;
+    setTimeout(async () => {
+      try {
+        if (!printRef.current) throw new Error("Referencia del reporte no encontrada");
+        
         const canvas = await html2canvas(printRef.current, {
           scale: 2,
           useCORS: true,
@@ -229,13 +230,13 @@ export function MatchAnalytics() {
         pdf.save(`Reporte_VolleyLab_${new Date().getTime()}.pdf`);
         
         toast.success("PDF generado exitosamente!", { id: "pdf-toast" });
+      } catch (err: any) {
+        console.error("PDF Error:", err);
+        toast.error("Error al generar PDF: " + (err.message || "Desconocido"), { id: "pdf-toast" });
+      } finally {
         setIsExporting(false);
-      }, 500);
-    } catch (err) {
-      console.error(err);
-      toast.error("Error al generar PDF", { id: "pdf-toast" });
-      setIsExporting(false);
-    }
+      }
+    }, 800); // Dar un poco más de tiempo para que rendericen los mapas
   };
 
   const [newMatchForm, setNewMatchForm] = useState({
@@ -791,7 +792,7 @@ export function MatchAnalytics() {
         </DialogContent>
       </Dialog>
       {/* HIDDEN PRINTABLE REPORT */}
-      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -100, opacity: 0.01, pointerEvents: 'none' }}>
          {dynStats && <PrintableMatchReport ref={printRef} dynStats={dynStats} match={dynStats.match} players={dynStats.players} />}
       </div>
     </div>
