@@ -200,16 +200,16 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
         </div>
 
         {/* Heatmaps */}
-        <div className="absolute left-[40px] top-[490px] w-[349px] h-[340px] glass-card p-6 relative overflow-hidden flex items-center justify-center">
-          <div className="absolute left-6 top-6 font-mono text-[11px] tracking-[1.4px] text-[#91CAFF]">ATAQUES EN CANCHA</div>
-          <div className="scale-75 origin-center mt-8">
+        <div className="absolute left-[40px] top-[490px] w-[349px] h-[340px] glass-card p-6 overflow-hidden flex items-center justify-center">
+          <div className="absolute left-6 top-6 font-mono text-[11px] tracking-[1.4px] text-[#91CAFF] z-10">ATAQUES EN CANCHA</div>
+          <div className="transform scale-75 origin-center mt-8 relative z-0">
             <CourtHeatmap rallies={rallies || []} />
           </div>
         </div>
 
-        <div className="absolute left-[405px] top-[490px] w-[349px] h-[340px] glass-card p-6 relative overflow-hidden flex items-center justify-center">
-          <div className="absolute left-6 top-6 font-mono text-[11px] tracking-[1.4px] text-[#91F2FF]">ATAQUES EN RED (TRAYECTORIA)</div>
-          <div className="scale-75 origin-center mt-8">
+        <div className="absolute left-[405px] top-[490px] w-[349px] h-[340px] glass-card p-6 overflow-hidden flex items-center justify-center">
+          <div className="absolute left-6 top-6 font-mono text-[11px] tracking-[1.4px] text-[#91F2FF] z-10">ATAQUES EN RED (TRAYECTORIA)</div>
+          <div className="transform scale-[0.6] origin-center mt-8 relative z-0 w-[400px]">
             <NetHeatmap rallies={rallies || []} />
           </div>
         </div>
