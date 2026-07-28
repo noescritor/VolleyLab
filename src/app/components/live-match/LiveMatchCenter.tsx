@@ -49,6 +49,7 @@ const GESTURES = [
   { id:"recepcion", label:"Recepción", icon:"shield"  },
   { id:"armado",    label:"Armado",    icon:"refresh" },
   { id:"ataque",    label:"Ataque",    icon:"bolt"    },
+  { id:"dejada",    label:"Dejada",    icon:"feather" },
   { id:"bloqueo",   label:"Bloqueo",   icon:"shield"  },
   { id:"defensa",   label:"Defensa",   icon:"feather" },
 ];
@@ -84,6 +85,7 @@ const SVGS: any = {
   hist:    <><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/><polyline points="12 7 12 12 15 15"/></>,
   flag:    <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>,
   chart:   <><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>,
+  clock:   <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>
 };
 
 const Ico = ({ k, sz = 18, style = {} }: any) => (
@@ -141,7 +143,7 @@ function CourtCell({ zone, playerId, pName, selected, status, onTap, onLong }: a
 /* ═══════════════════════════════════════════
    SUBSTITUTION SHEET
 ═══════════════════════════════════════════ */
-function SubSheet({ zone, outName, bench, isBack, onSub, onCancel, libero }: any) {
+function SubSheet({ zone, outName, bench, isBack, onSub, onCancel, libero, subsLeft, subLimit }: any) {
   return (
     <div style={{
       position: "fixed", inset: 0,
@@ -159,17 +161,25 @@ function SubSheet({ zone, outName, bench, isBack, onSub, onCancel, libero }: any
           background: "rgba(255,255,255,0.15)", margin: "0 auto 20px",
         }}/>
 
-        <div style={{ fontSize:10, color:C.t2, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:3 }}>
-          Cambio · {ZLBL[zone as keyof typeof ZLBL]}
-        </div>
-        <div style={{ fontSize:17, fontWeight:500, color:C.w, marginBottom:20 }}>
-          Sale {outName}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize:10, color:C.t2, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:3 }}>
+              Cambio · {ZLBL[zone as keyof typeof ZLBL]}
+            </div>
+            <div style={{ fontSize:17, fontWeight:500, color:C.w }}>
+              Sale {outName}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize:10, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em" }}>Cambios Restantes</div>
+            <div style={{ fontSize:16, fontWeight:600, color: subsLeft === 0 ? C.rdLt : C.vtLt }}>{subsLeft} / {subLimit}</div>
+          </div>
         </div>
 
         {/* Libero option — only back row */}
         {isBack && libero && (
           <>
-            <button onClick={() => onSub(libero.id)} style={{
+            <button onClick={() => onSub(libero.id, true)} style={{
               width: "100%", padding: 13, borderRadius: 10, marginBottom: 12,
               border: `1px solid ${C.vt}`, background: C.vtBg,
               color: C.vtLt, fontSize: 14, fontWeight: 500,
@@ -195,11 +205,20 @@ function SubSheet({ zone, outName, bench, isBack, onSub, onCancel, libero }: any
         {bench.length > 0 ? (
           <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:16 }}>
             {bench.map((p: any) => (
-              <button key={p.id} onClick={() => onSub(p.id)} style={{
-                padding: "10px 18px", borderRadius: 999,
-                border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.04)",
-                color: C.w, fontSize: 13, fontWeight:500
-              }}>{shortName(p.name)}</button>
+              <button 
+                key={p.id} 
+                onClick={() => onSub(p.id, false)} 
+                disabled={subsLeft === 0}
+                style={{
+                  padding: "10px 18px", borderRadius: 999,
+                  border: `1px solid ${subsLeft === 0 ? C.bd : C.bdMed}`, 
+                  background: "rgba(255,255,255,0.04)",
+                  color: subsLeft === 0 ? C.t3 : C.w, fontSize: 13, fontWeight:500,
+                  opacity: subsLeft === 0 ? 0.5 : 1
+                }}
+              >
+                {shortName(p.name)}
+              </button>
             ))}
           </div>
         ) : (
@@ -252,61 +271,6 @@ function Net() {
 }
 
 /* ═══════════════════════════════════════════
-   COURT TARGET MAP (Modal para cierre de rally)
-═══════════════════════════════════════════ */
-function CourtTargetMap({ title, subtitle, color, onSelectTarget, onCancel }: any) {
-  // A simple 3x3 grid for the opponent court
-  const zones = [
-    { id: "4", label: "Z4" }, { id: "3", label: "Z3" }, { id: "2", label: "Z2" },
-    { id: "5", label: "Z5" }, { id: "6", label: "Z6" }, { id: "1", label: "Z1" },
-  ];
-
-  return (
-    <div style={{
-      position: "fixed", inset: 0,
-      background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)",
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 200,
-    }}>
-      <div style={{ textAlign:"center", marginBottom:30 }}>
-        <div style={{ color: color, fontWeight: 600, fontSize: 22, marginBottom: 4 }}>{title}</div>
-        <div style={{ color: C.t2, fontSize: 14 }}>{subtitle}</div>
-      </div>
-
-      <div style={{ 
-        width: 280, height: 280, 
-        border: `2px solid ${C.bdMed}`, 
-        background: "rgba(255,255,255,0.02)",
-        display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(2, 1fr)",
-        gap: 2, padding: 2, position: "relative"
-      }}>
-        {zones.map(z => (
-          <button key={z.id} onClick={() => onSelectTarget(z.id)} style={{
-            background: "rgba(255,255,255,0.05)",
-            border: `1px solid ${C.bd}`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: C.t3, fontSize: 18, fontWeight: 600,
-            transition: "background 0.2s"
-          }}
-          >
-            {z.label}
-          </button>
-        ))}
-        {/* Fake net at the bottom indicating our side is below */}
-        <div style={{ position:"absolute", bottom:-2, left:0, right:0, height:4, background:C.w, opacity:0.8 }} />
-      </div>
-      <div style={{ color: C.w, fontSize: 12, marginTop: 16, letterSpacing: "0.1em" }}>RED / NUESTRA CANCHA AQUÍ ABAJO</div>
-
-      <button onClick={onCancel} style={{
-        marginTop: 40, padding: "12px 24px", borderRadius: 999,
-        border: `1px solid ${C.bd}`, color: C.t1, fontSize: 14,
-      }}>
-        Cancelar (El punto no ha terminado)
-      </button>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════
    LIVE ANALYTICS VIEW
 ═══════════════════════════════════════════ */
 function LiveAnalytics({ rallies, players, onClose }: any) {
@@ -326,7 +290,7 @@ function LiveAnalytics({ rallies, players, onClose }: any) {
   rallies.forEach((r: any) => {
     r.actions.forEach((a: any) => {
       if (!stats[a.playerId]) return;
-      if (a.gesture === "ataque") {
+      if (a.gesture === "ataque" || a.gesture === "dejada") {
         stats[a.playerId].attacks++;
         totalAttacks++;
         if (a.quality === "pos") { stats[a.playerId].kills++; totalKills++; }
@@ -515,6 +479,7 @@ export default function LiveMatchCenter() {
   /* — Match/Database State — */
   const [opponent, setOpponent] = useState("");
   const [matchType, setMatchType] = useState("Amistoso");
+  const [subRule, setSubRule] = useState(6); // 6 (FIVB) or 12 (Juvenil)
 
   /* — Navigation — */
   const [screen, setScreen] = useState("setup"); // "setup" | "lineup" | "live"
@@ -528,10 +493,13 @@ export default function LiveMatchCenter() {
 
   /* — Global Rally History (Para Analytics) — */
   const [allRallies, setAllRallies] = useState<any[]>([]);
+  // We keep a timeline of events (timeouts, rallies)
+  const [timeline, setTimeline] = useState<any[]>([]);
 
   /* — Current Rally state (Punto Activo) — */
   const [currentRallyActions, setCurrentRallyActions] = useState<any[]>([]);
   const [pendingEndResult, setPendingEndResult] = useState<{winner: 'our'|'rival', action?: any} | null>(null);
+  const [pendingError, setPendingError] = useState<any>(null);
 
   /* — Live Match state — */
   const [ourScore,   setOurScore]   = useState(0);
@@ -542,6 +510,11 @@ export default function LiveMatchCenter() {
   const [flash,      setFlash]      = useState<string|null>(null);
   const [msg,        setMsg]        = useState("");
   const [hist,       setHist]       = useState<any[]>([]); // undo history
+  
+  // Set-specific trackers
+  const [subsUsed, setSubsUsed] = useState(0);
+  const [ourTimeouts, setOurTimeouts] = useState(0);
+  const [rivalTimeouts, setRivalTimeouts] = useState(0);
 
   /* — Derived Players — */
   const benchPlayers = useMemo(() => luBench(lineup, players), [lineup, players]);
@@ -557,7 +530,7 @@ export default function LiveMatchCenter() {
   /* — Undo History — */
   const snap = () => ({
     ourScore, rivalScore, lineup: dc(lineup),
-    currentRallyActions: dc(currentRallyActions)
+    currentRallyActions: dc(currentRallyActions), subsUsed, ourTimeouts, rivalTimeouts
   });
   const pushH = () => setHist(h => [...h.slice(-19), snap()]);
 
@@ -568,6 +541,9 @@ export default function LiveMatchCenter() {
     setRivalScore(p.rivalScore);
     setLineup(p.lineup);
     setCurrentRallyActions(p.currentRallyActions);
+    setSubsUsed(p.subsUsed);
+    setOurTimeouts(p.ourTimeouts);
+    setRivalTimeouts(p.rivalTimeouts);
     setHist(h => h.slice(0, -1));
     setMsg("deshecho");
   };
@@ -590,6 +566,7 @@ export default function LiveMatchCenter() {
     setSelP(nums[0] || null);
     setHist([]); setMsg("");
     setOurScore(0); setRivalScore(0); 
+    setSubsUsed(0); setOurTimeouts(0); setRivalTimeouts(0);
     setCurrentRallyActions([]);
     setScreen("live");
   };
@@ -614,8 +591,33 @@ export default function LiveMatchCenter() {
       // Positivo: Gana el punto, preguntamos DÓNDE
       setPendingEndResult({ winner: 'our', action });
     } else if (key === "neg") {
-      // Negativo: Pierde el punto, preguntamos DÓNDE
-      setPendingEndResult({ winner: 'rival', action });
+      // Negativo: Pierde el punto, primero averiguamos por qué
+      setPendingError(action);
+    }
+  };
+
+  const handleSelectErrorReason = (reason: string) => {
+    const actionWithError = { ...pendingError, errorDetail: reason };
+    setPendingError(null);
+    
+    // Si fue falta técnica, no necesitamos heatmap, terminamos el rally aquí.
+    if (reason === 'Falta Técnica') {
+      const finalActions = [...currentRallyActions, actionWithError];
+      const newRally = {
+        id: Date.now().toString(),
+        winner: 'rival',
+        endLocation: 'falta',
+        actions: finalActions
+      };
+      setAllRallies(prev => [...prev, newRally]);
+      setTimeline(prev => [...prev, { type: 'rally', data: newRally }]);
+      setRivalScore(s => s + 1);
+      doFlash("rival");
+      setMsg(`Punto rival (Falta de ${getPlayerName(actionWithError.playerId)})`);
+      setCurrentRallyActions([]);
+    } else {
+      // Para Red o Fuera, pedimos confirmación de posición o la saltamos
+      setPendingEndResult({ winner: 'rival', action: actionWithError });
     }
   };
 
@@ -623,17 +625,21 @@ export default function LiveMatchCenter() {
     setPendingEndResult({ winner: side });
   };
 
-  const confirmEndOfRally = (impact: any, plane: 'court'|'net') => {
+  const confirmEndOfRally = (impact: any, plane: 'court'|'net', skipHeatmap = false) => {
     if (!pendingEndResult) return;
     
     pushH();
     
     // Determine the targetZone based on the heatmap used
     let targetZone = '';
-    if (plane === 'court') {
-      targetZone = getZoneFromXY(impact.x, impact.y);
-    } else {
-      targetZone = getNetZoneFromXY(impact.x);
+    let finalImpact = impact;
+
+    if (!skipHeatmap && impact) {
+      if (plane === 'court') {
+        targetZone = getZoneFromXY(impact.x, impact.y);
+      } else {
+        targetZone = getNetZoneFromXY(impact.x);
+      }
     }
 
     // Add the final action to the rally if it came from a gesture
@@ -647,10 +653,11 @@ export default function LiveMatchCenter() {
       id: Date.now().toString(),
       winner: pendingEndResult.winner,
       endLocation: targetZone,
-      impact: { ...impact, plane },
+      impact: skipHeatmap ? null : { ...finalImpact, plane },
       actions: finalActions
     };
     setAllRallies(prev => [...prev, newRally]);
+    setTimeline(prev => [...prev, { type: 'rally', data: newRally }]);
 
     // Update Score
     if (pendingEndResult.winner === "our") {
@@ -668,18 +675,38 @@ export default function LiveMatchCenter() {
     setPendingEndResult(null);
   };
 
-  /* ── ROTATE & SUBS ── */
+  /* ── ROTATE, TIMEOUTS & SUBS ── */
   const rotate = () => {
     pushH();
     setLineup((l:any) => ({ p1:l.p2, p2:l.p3, p3:l.p4, p4:l.p5, p5:l.p6, p6:l.p1 }));
     setMsg("Rotación aplicada");
   };
 
-  const doSub = (zone: string, newN: string) => {
+  const callTimeout = (team: 'our'|'rival') => {
+    pushH();
+    if (team === 'our') {
+      if (ourTimeouts >= 2) { setMsg("Ya usaste tus 2 tiempos"); return; }
+      setOurTimeouts(t => t + 1);
+    } else {
+      if (rivalTimeouts >= 2) { setMsg("El rival ya usó sus 2 tiempos"); return; }
+      setRivalTimeouts(t => t + 1);
+    }
+    setTimeline(prev => [...prev, { type: 'timeout', team, ourScore, rivalScore }]);
+    setMsg(`Tiempo fuera: ${team === 'our' ? 'Nuestro' : 'Rival'}`);
+  };
+
+  const doSub = (zone: string, newN: string, isLiberoSub: boolean) => {
+    if (!isLiberoSub && subsUsed >= subRule) {
+      setMsg("Límite de cambios alcanzado");
+      return;
+    }
     pushH();
     const outN = getPlayerName(lineup[zone]);
     setLineup((l:any) => ({ ...l, [zone]: newN }));
     setSubZone(null);
+    if (!isLiberoSub) setSubsUsed(s => s + 1);
+    
+    setTimeline(prev => [...prev, { type: 'sub', team: 'our', out: outN, in: getPlayerName(newN) }]);
     setMsg(`Cambio: Entra ${getPlayerName(newN)} x Sale ${outN}`);
   };
 
@@ -695,7 +722,6 @@ export default function LiveMatchCenter() {
   const endMatch = async () => {
     setMsg("Guardando partido...");
     
-    // Compute aggregated player stats from allRallies if we wanted, but we can also just save rallies
     const scoreStr = `${ourScore}-${rivalScore}`;
     const resultStr = ourScore > rivalScore ? 'W' : 'L';
 
@@ -707,12 +733,14 @@ export default function LiveMatchCenter() {
         players: [], 
         score: scoreStr,
         result: resultStr,
-        rallies: allRallies
+        rallies: allRallies,
+        timeline // Save the timeline history!
       } as any);
 
       setTimeout(() => {
         setScreen("setup");
         setAllRallies([]);
+        setTimeline([]);
         setOurScore(0);
         setRivalScore(0);
         setSetNum(1);
@@ -743,7 +771,7 @@ export default function LiveMatchCenter() {
             />
           </div>
 
-          <div style={{ marginBottom: 32 }}>
+          <div style={{ marginBottom: 16 }}>
             <label style={{ display:"block", color:C.t2, fontSize:12, marginBottom:8 }}>Tipo de Partido</label>
             <select 
               value={matchType} onChange={e => setMatchType(e.target.value)}
@@ -752,6 +780,17 @@ export default function LiveMatchCenter() {
               <option value="Amistoso" style={{ background: C.bg, color: C.w }}>Amistoso</option>
               <option value="Liga" style={{ background: C.bg, color: C.w }}>Liga</option>
               <option value="Torneo" style={{ background: C.bg, color: C.w }}>Torneo</option>
+            </select>
+          </div>
+
+          <div style={{ marginBottom: 32 }}>
+            <label style={{ display:"block", color:C.t2, fontSize:12, marginBottom:8 }}>Regla de Sustituciones</label>
+            <select 
+              value={subRule} onChange={e => setSubRule(Number(e.target.value))}
+              style={{ width:"100%", padding:14, borderRadius:10, background:C.card, border:`1px solid ${C.bd}`, color:C.w, fontSize:16, colorScheme: "dark" }}
+            >
+              <option value={6} style={{ background: C.bg, color: C.w }}>6 Cambios (Regla FIVB)</option>
+              <option value={12} style={{ background: C.bg, color: C.w }}>12 Cambios (Regla Juvenil)</option>
             </select>
           </div>
 
@@ -882,12 +921,29 @@ export default function LiveMatchCenter() {
     <>
       {showAnalytics && <LiveAnalytics rallies={allRallies} players={players} onClose={() => setShowAnalytics(false)} />}
       
+      {/* ERROR REASON MODAL */}
+      {pendingError && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', padding: 20 }}>
+          <div style={{ width: 300, background: '#111116', border: `1px solid ${C.bd}`, borderRadius: 16, padding: 24, textAlign: 'center' }}>
+            <h3 style={{ color: C.w, fontSize: 18, fontWeight: 600, marginBottom: 8 }}>¿Qué sucedió?</h3>
+            <p style={{ color: C.t2, fontSize: 13, marginBottom: 20 }}>Especifica el tipo de error en el {pendingError.gesture}</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button onClick={() => handleSelectErrorReason("Red")} style={{ padding: 14, borderRadius: 10, border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.05)", color: C.w, fontSize: 15, fontWeight: 500 }}>🥅 Error en la Red</button>
+              <button onClick={() => handleSelectErrorReason("Fuera")} style={{ padding: 14, borderRadius: 10, border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.05)", color: C.w, fontSize: 15, fontWeight: 500 }}>❌ Fuera / Out</button>
+              <button onClick={() => handleSelectErrorReason("Falta Técnica")} style={{ padding: 14, borderRadius: 10, border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.05)", color: C.w, fontSize: 15, fontWeight: 500 }}>⚠️ Falta Técnica (Doble, Rotación)</button>
+            </div>
+            <button onClick={() => setPendingError(null)} style={{ marginTop: 24, fontSize: 13, color: C.t3, background: 'none', border: 'none' }}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
       {pendingEndResult && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', padding: 20 }}>
-          <div style={{ position: 'relative', width: 300 }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.92)', padding: 20 }}>
+          <div style={{ position: 'relative', width: 320 }}>
             {/* Header info */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div style={{ color: pendingEndResult.winner === 'our' ? C.gnLt : C.rdLt, fontWeight: 600, fontSize: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ color: pendingEndResult.winner === 'our' ? C.gnLt : C.rdLt, fontWeight: 600, fontSize: 16 }}>
                 {pendingEndResult.winner === 'our' ? '¡PUNTO NUESTRO!' : 'PUNTO RIVAL'}
               </div>
               <button 
@@ -898,8 +954,8 @@ export default function LiveMatchCenter() {
               </button>
             </div>
             
-            <div style={{ color: C.w, fontSize: 12, marginBottom: 12, opacity: 0.8 }}>
-              Toca {pendingEndResult.action?.gesture === 'bloqueo' ? 'la red' : 'la cancha'} donde finalizó la acción
+            <div style={{ color: C.t2, fontSize: 12, marginBottom: 16 }}>
+              Toca dónde cayó el balón, o salta este paso si no aplica.
             </div>
 
             {pendingEndResult.action?.gesture === 'bloqueo' ? (
@@ -910,9 +966,18 @@ export default function LiveMatchCenter() {
             ) : (
               <CourtHeatmap 
                 mode="capture"
+                viewHalf={pendingEndResult.winner === 'our' ? 'top' : 'bottom'}
+                withOutZone={true}
                 onCapture={(impact) => confirmEndOfRally(impact, 'court')}
               />
             )}
+
+            <button onClick={() => confirmEndOfRally(null, 'court', true)} style={{
+              width: "100%", marginTop: 20, padding: 14, borderRadius: 10,
+              border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.05)", color: C.t1, fontSize: 14, fontWeight: 500
+            }}>
+              Saltar Mapa
+            </button>
           </div>
         </div>
       )}
@@ -960,8 +1025,18 @@ export default function LiveMatchCenter() {
               </button>
             </div>
           </div>
+          
+          {/* ── TIMEOUTS ── */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+            <button onClick={() => callTimeout('our')} disabled={ourTimeouts >= 2} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: ourTimeouts >= 2 ? C.t3 : C.vtLt, background: 'transparent', border: 'none', padding: '4px 0' }}>
+              <Ico k="clock" sz={12}/> Tiempo Nosotros ({2 - ourTimeouts})
+            </button>
+            <button onClick={() => callTimeout('rival')} disabled={rivalTimeouts >= 2} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: rivalTimeouts >= 2 ? C.t3 : C.rdLt, background: 'transparent', border: 'none', padding: '4px 0' }}>
+              <Ico k="clock" sz={12}/> Tiempo Rival ({2 - rivalTimeouts})
+            </button>
+          </div>
 
-          {/* ── QUICK SCORE BAR (Ahora cierra directo) ── */}
+          {/* ── QUICK SCORE BAR ── */}
           <div style={{ display:"flex", gap:8, marginBottom:14 }}>
             <button onClick={() => quickScore("our")} style={{
                 flex: 1, padding: "10px 6px", borderRadius: 10,
@@ -1010,20 +1085,20 @@ export default function LiveMatchCenter() {
             <div style={{ fontSize:10, color:C.t2, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>
               Gesto (Selecciona uno)
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:6 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:6 }}>
               {GESTURES.map(g => {
                 const sel = g.id === activeG;
                 return (
                   <button key={g.id} onClick={() => setActiveG(g.id)}
                     style={{
-                      padding: "10px 4px", borderRadius: 10,
+                      padding: "10px 2px", borderRadius: 10,
                       border: `1px solid ${sel ? C.vt : C.bd}`,
                       background: sel ? C.vtBg : "rgba(255,255,255,0.02)",
                       color: sel ? C.vtLt : C.t2,
                       display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                     }}>
-                    <Ico k={g.icon} sz={18}/>
-                    <span style={{ fontSize: 10 }}>{g.label}</span>
+                    <Ico k={g.icon} sz={16}/>
+                    <span style={{ fontSize: 9 }}>{g.label}</span>
                   </button>
                 );
               })}
@@ -1084,7 +1159,9 @@ export default function LiveMatchCenter() {
               zone={subZone} outName={getPlayerName(lineup[subZone])}
               bench={benchPlayers} isBack={ZROW[subZone as keyof typeof ZROW] === "back"}
               libero={liberoPlayer}
-              onSub={(id: string) => doSub(subZone, id)}
+              subsLeft={subRule - subsUsed}
+              subLimit={subRule}
+              onSub={(id: string, isLib: boolean) => doSub(subZone, id, isLib)}
               onCancel={() => setSubZone(null)}
             />
           )}

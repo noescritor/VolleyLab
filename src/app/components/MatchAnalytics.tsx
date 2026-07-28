@@ -52,6 +52,12 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
 
   const pStats: Record<string, any> = {};
   
+  const errorPhaseFreq = [
+    { name: 'Inicio (0-15 pts)', Saque: 0, Ataque: 0, Recepcion: 0, Bloqueo: 0 },
+    { name: 'Desarrollo (16-32 pts)', Saque: 0, Ataque: 0, Recepcion: 0, Bloqueo: 0 },
+    { name: 'Cierre (33+ pts)', Saque: 0, Ataque: 0, Recepcion: 0, Bloqueo: 0 },
+  ];
+  
   // Initialize all players
   allPlayers.forEach(p => {
     pStats[p.id] = {
@@ -64,6 +70,9 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
   });
 
   rallies.forEach((r: any, idx: number) => {
+    const totalPts = (r.ourScore || 0) + (r.rivalScore || 0);
+    const pIdx = totalPts <= 15 ? 0 : totalPts <= 32 ? 1 : 2;
+
     momentum.push({
       name: `${r.ourScore}-${r.rivalScore}`,
       diff: r.ourScore - r.rivalScore,
@@ -96,6 +105,13 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
         teamBalance[q]++;
         
         const g = a.gesture?.toLowerCase();
+        
+        if (q === 'neg') {
+          if (g === 'saque') errorPhaseFreq[pIdx].Saque++;
+          else if (g === 'ataque' || g === 'ataque ' || g === 'dejada') errorPhaseFreq[pIdx].Ataque++;
+          else if (g === 'recepción' || g === 'recepcion') errorPhaseFreq[pIdx].Recepcion++;
+          else if (g === 'bloqueo') errorPhaseFreq[pIdx].Bloqueo++;
+        }
         if (g === 'ataque' || g === 'ataque ') {
           s.attacks[q]++;
           s.attacks.attempts++;
@@ -154,6 +170,7 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
     rallies,
     momentum,
     teamBalance,
+    errorPhaseFreq,
     players: Object.values(pStats).filter((p: any) => 
       p.attacks.attempts > 0 || p.serves.pos > 0 || p.serves.neg > 0 || p.serves.neu > 0 || 
       p.receptions.attempts > 0 || p.blocks.pos > 0 || p.blocks.neg > 0 || p.blocks.neu > 0
@@ -166,7 +183,7 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
 export function MatchAnalytics() {
   const { state, createMatch } = useApp();
   const [selectedMatch, setSelectedMatch] = useState('');
-  const [activeTab, setActiveTab] = useState<'heatmaps'|'efficiency'|'kpis'>('efficiency');
+  const [activeTab, setActiveTab] = useState<'heatmaps'|'efficiency'|'kpis'|'timeline'>('efficiency');
   const [selectedFundament, setSelectedFundament] = useState('attacks');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -296,6 +313,9 @@ export function MatchAnalytics() {
             </button>
             <button onClick={() => setActiveTab('kpis')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'kpis' ? 'bg-[#00e5ff] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
               KPIs Individuales
+            </button>
+            <button onClick={() => setActiveTab('timeline')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'timeline' ? 'bg-[#00e5ff] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+              Línea de Tiempo
             </button>
           </div>
 
@@ -531,8 +551,66 @@ export function MatchAnalytics() {
               </div>
             </div>
           )}
+
+          {/* TAB 4: LÍNEA DE TIEMPO */}
+          {activeTab === 'timeline' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              
+              <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
+                <p className="text-[12px] font-semibold text-[#00e5ff] uppercase tracking-widest mb-4">Frecuencia de Errores por Fase de Set</p>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dynStats.errorPhaseFreq} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#2e4a72" opacity={0.3} />
+                      <XAxis dataKey="name" tick={{ fill: '#5a6070', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#5a6070', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <Tooltip {...CHART_TOOLTIP} />
+                      <Bar dataKey="Saque" stackId="a" fill="#ffdd00" name="Errores de Saque" />
+                      <Bar dataKey="Ataque" stackId="a" fill="#00e5ff" name="Errores de Ataque/Dejada" />
+                      <Bar dataKey="Recepcion" stackId="a" fill="#91FFB0" name="Errores de Recepción" />
+                      <Bar dataKey="Bloqueo" stackId="a" fill="#A191FF" name="Errores de Bloqueo" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {dynStats.match.timeline && dynStats.match.timeline.length > 0 && (
+                <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
+                  <p className="text-[12px] font-semibold text-[#00e5ff] uppercase tracking-widest mb-4">Línea de Tiempo del Partido</p>
+                  <div className="space-y-3 pl-2 border-l border-[#2e4a72]/30">
+                    {dynStats.match.timeline.map((evt: any, i: number) => (
+                      <div key={i} className="relative pl-4">
+                        <div className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-[#00e5ff]"></div>
+                        <p className="text-[11px] text-[#5a6070] font-mono mb-1">
+                          {evt.type === 'timeout' ? 'TIEMPO FUERA' : evt.type === 'sub' ? 'CAMBIO' : 'RALLY'}
+                        </p>
+                        {evt.type === 'timeout' && (
+                          <p className="text-[13px] text-white">
+                            Tiempo pedido por <span className={evt.team === 'our' ? 'text-[#00e5ff]' : 'text-[#ff1100]'}>{evt.team === 'our' ? 'Nosotros' : 'Rival'}</span> (Marcador: {evt.ourScore}-{evt.rivalScore})
+                          </p>
+                        )}
+                        {evt.type === 'sub' && (
+                          <p className="text-[13px] text-white">
+                            Entra <span className="text-[#00e5ff]">{evt.in}</span> x Sale <span className="text-[#5a6070]">{evt.out}</span>
+                          </p>
+                        )}
+                        {evt.type === 'rally' && evt.data && (
+                          <p className="text-[13px] text-white">
+                            Punto para <span className={evt.data.winner === 'our' ? 'text-[#00e5ff]' : 'text-[#ff1100]'}>{evt.data.winner === 'our' ? 'Nosotros' : 'Rival'}</span> 
+                            {evt.data.actions && evt.data.actions.length > 0 && ` (${evt.data.actions.length} acciones)`}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
         </>
       )}
+
 
       {/* Dialog for creating Match - Included from before */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

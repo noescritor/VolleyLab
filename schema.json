@@ -1,0 +1,750 @@
+{
+  "global_players": {
+    "required": [
+      "id",
+      "global_athlete_id",
+      "name",
+      "created_at",
+      "updated_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "auth_user_id": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "global_athlete_id": {
+        "format": "text",
+        "type": "string"
+      },
+      "name": {
+        "format": "text",
+        "type": "string"
+      },
+      "birth_date": {
+        "format": "date",
+        "type": "string"
+      },
+      "height_cm": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "weight_kg": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "match_segments": {
+    "required": [
+      "id",
+      "match_id",
+      "segment_type",
+      "number",
+      "created_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "match_id": {
+        "description": "Note:\nThis is a Foreign Key to `matches.id`.<fk table='matches' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "segment_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "number": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "score_us": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "score_them": {
+        "default": 0,
+        "format": "integer",
+        "type": "integer"
+      },
+      "segment_metadata": {
+        "format": "jsonb"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "drill_results": {
+    "required": [
+      "id",
+      "drill_id",
+      "player_id",
+      "source",
+      "date",
+      "metric_value",
+      "unit",
+      "created_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "drill_id": {
+        "description": "Note:\nThis is a Foreign Key to `drills.id`.<fk table='drills' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "player_id": {
+        "description": "Note:\nThis is a Foreign Key to `global_players.id`.<fk table='global_players' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "source": {
+        "default": "official_coach",
+        "format": "text",
+        "type": "string"
+      },
+      "date": {
+        "default": "CURRENT_DATE",
+        "format": "date",
+        "type": "string"
+      },
+      "metric_value": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "unit": {
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "match_subsegments": {
+    "required": [
+      "id",
+      "segment_id",
+      "subsegment_type",
+      "created_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "segment_id": {
+        "description": "Note:\nThis is a Foreign Key to `match_segments.id`.<fk table='match_segments' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "subsegment_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "number": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "subsegment_metadata": {
+        "format": "jsonb"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "matches": {
+    "required": [
+      "id",
+      "org_id",
+      "team_id",
+      "sport_type",
+      "opponent_name",
+      "date",
+      "created_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "org_id": {
+        "description": "Note:\nThis is a Foreign Key to `orgs.org_id`.<fk table='orgs' column='org_id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "team_id": {
+        "description": "Note:\nThis is a Foreign Key to `teams.id`.<fk table='teams' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "sport_type": {
+        "default": "volleyball",
+        "format": "text",
+        "type": "string"
+      },
+      "opponent_name": {
+        "format": "text",
+        "type": "string"
+      },
+      "date": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "competition_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "location": {
+        "format": "text",
+        "type": "string"
+      },
+      "match_metadata": {
+        "format": "jsonb"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "players": {
+    "required": [
+      "id",
+      "name"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "org_id": {
+        "description": "Note:\nThis is a Foreign Key to `orgs.org_id`.<fk table='orgs' column='org_id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "team_id": {
+        "description": "Note:\nThis is a Foreign Key to `teams.id`.<fk table='teams' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "dorsal": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "name": {
+        "format": "text",
+        "type": "string"
+      },
+      "position": {
+        "format": "text",
+        "type": "string"
+      },
+      "reach_cm": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "height_cm": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "wingspan_cm": {
+        "format": "integer",
+        "type": "integer"
+      },
+      "weight_kg": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "hand": {
+        "format": "text",
+        "type": "string"
+      },
+      "birth_date": {
+        "format": "date",
+        "type": "string"
+      },
+      "notes": {
+        "format": "text",
+        "type": "string"
+      },
+      "is_active": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "actions": {
+    "required": [
+      "id",
+      "match_id",
+      "action_type",
+      "ts",
+      "created_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "match_id": {
+        "description": "Note:\nThis is a Foreign Key to `matches.id`.<fk table='matches' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "subsegment_id": {
+        "description": "Note:\nThis is a Foreign Key to `match_subsegments.id`.<fk table='match_subsegments' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "player_id": {
+        "description": "Note:\nThis is a Foreign Key to `global_players.id`.<fk table='global_players' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "action_type": {
+        "format": "text",
+        "type": "string"
+      },
+      "speed_kmh": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "x": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "y": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "action_details": {
+        "format": "jsonb"
+      },
+      "ts": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "teams": {
+    "required": [
+      "id",
+      "org_id",
+      "sport_type",
+      "name",
+      "created_at",
+      "updated_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "org_id": {
+        "description": "Note:\nThis is a Foreign Key to `orgs.org_id`.<fk table='orgs' column='org_id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "sport_type": {
+        "default": "volleyball",
+        "format": "text",
+        "type": "string"
+      },
+      "name": {
+        "format": "text",
+        "type": "string"
+      },
+      "category": {
+        "format": "text",
+        "type": "string"
+      },
+      "gender": {
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "club_roster": {
+    "required": [
+      "id",
+      "org_id",
+      "player_id",
+      "status",
+      "created_at",
+      "updated_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "org_id": {
+        "description": "Note:\nThis is a Foreign Key to `orgs.org_id`.<fk table='orgs' column='org_id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "player_id": {
+        "description": "Note:\nThis is a Foreign Key to `global_players.id`.<fk table='global_players' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "team_id": {
+        "description": "Note:\nThis is a Foreign Key to `teams.id`.<fk table='teams' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "status": {
+        "default": "active",
+        "format": "text",
+        "type": "string"
+      },
+      "number": {
+        "format": "text",
+        "type": "string"
+      },
+      "position": {
+        "format": "text",
+        "type": "string"
+      },
+      "sport_metadata": {
+        "format": "jsonb"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "drills": {
+    "required": [
+      "id",
+      "org_id",
+      "sport_type",
+      "name",
+      "created_at"
+    ],
+    "properties": {
+      "id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "org_id": {
+        "description": "Note:\nThis is a Foreign Key to `orgs.org_id`.<fk table='orgs' column='org_id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "sport_type": {
+        "default": "volleyball",
+        "format": "text",
+        "type": "string"
+      },
+      "name": {
+        "format": "text",
+        "type": "string"
+      },
+      "goal": {
+        "format": "text",
+        "type": "string"
+      },
+      "metric": {
+        "format": "text",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "player_tests": {
+    "required": [
+      "id",
+      "org_id",
+      "player_id",
+      "date"
+    ],
+    "properties": {
+      "id": {
+        "default": "gen_random_uuid()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "org_id": {
+        "description": "Note:\nThis is a Foreign Key to `orgs.org_id`.<fk table='orgs' column='org_id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "player_id": {
+        "description": "Note:\nThis is a Foreign Key to `global_players.id`.<fk table='global_players' column='id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "date": {
+        "format": "date",
+        "type": "string"
+      },
+      "created_by": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "source": {
+        "default": "official_coach",
+        "format": "text",
+        "type": "string"
+      },
+      "notes": {
+        "format": "text",
+        "type": "string"
+      },
+      "cmj": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "sj": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "abordaje": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "vel_5m": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "vel_10m": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "t_test": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "spike_speed": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "serve_speed": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "reaction_time": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "shoulder_rom": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "ankle_rom": {
+        "format": "numeric",
+        "type": "number"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "orgs": {
+    "required": [
+      "org_id",
+      "nombre",
+      "created_at",
+      "updated_at"
+    ],
+    "properties": {
+      "org_id": {
+        "default": "extensions.uuid_generate_v4()",
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "nombre": {
+        "format": "text",
+        "type": "string"
+      },
+      "descripcion": {
+        "format": "text",
+        "type": "string"
+      },
+      "logo_url": {
+        "format": "text",
+        "type": "string"
+      },
+      "stripe_customer_id": {
+        "format": "text",
+        "type": "string"
+      },
+      "subscription_status": {
+        "default": "trialing",
+        "format": "text",
+        "type": "string"
+      },
+      "subscription_price_id": {
+        "format": "text",
+        "type": "string"
+      },
+      "trial_ends_at": {
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "org_members": {
+    "required": [
+      "org_id",
+      "user_id",
+      "rol",
+      "activo",
+      "created_at",
+      "updated_at"
+    ],
+    "properties": {
+      "org_id": {
+        "description": "Note:\nThis is a Primary Key.<pk/>\nThis is a Foreign Key to `orgs.org_id`.<fk table='orgs' column='org_id'/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "user_id": {
+        "description": "Note:\nThis is a Primary Key.<pk/>",
+        "format": "uuid",
+        "type": "string"
+      },
+      "rol": {
+        "default": "coach",
+        "format": "text",
+        "type": "string"
+      },
+      "activo": {
+        "default": true,
+        "format": "boolean",
+        "type": "boolean"
+      },
+      "created_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      },
+      "updated_at": {
+        "default": "now()",
+        "format": "timestamp with time zone",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+}

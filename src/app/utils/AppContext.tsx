@@ -38,6 +38,8 @@ interface Match {
   sideOut?: number;
   transition?: number;
   players: any[];
+  rallies?: any[];
+  timeline?: any[];
   createdAt: string;
   updatedAt: string;
 }
