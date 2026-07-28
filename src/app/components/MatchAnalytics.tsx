@@ -179,6 +179,81 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
     }
   });
 
+  // HISTORICAL TRENDS CALCULATION
+  let histSideOutAvg = 0;
+  let histTransAvg = 0;
+  if (matches && matches.length > 0) {
+    const pastMatches = matches
+      .filter((m: any) => m.id !== currentMatch.id && new Date(m.createdAt || m.date) <= new Date(currentMatch.createdAt || currentMatch.date))
+      .sort((a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime())
+      .slice(0, 5);
+
+    let histSOChances = 0, histSOSuccess = 0, histTrChances = 0, histTrSuccess = 0;
+    
+    pastMatches.forEach((m: any) => {
+      (m.rallies || []).forEach((r: any, idx: number) => {
+        const firstAction = r.actions?.[0];
+        if (firstAction && firstAction.gesture === 'saque') {
+          if (firstAction.playerId) { histTrChances++; if (r.winner === 'our') histTrSuccess++; }
+          else { histSOChances++; if (r.winner === 'our') histSOSuccess++; }
+        } else {
+          if (idx % 2 === 0) { histSOChances++; if(r.winner === 'our') histSOSuccess++; }
+          else { histTrChances++; if(r.winner === 'our') histTrSuccess++; }
+        }
+      });
+    });
+
+    histSideOutAvg = histSOChances > 0 ? Math.round((histSOSuccess/histSOChances)*100) : 0;
+    histTransAvg = histTrChances > 0 ? Math.round((histTrSuccess/histTrChances)*100) : 0;
+  }
+
+  // SUBSTITUTION IMPACT CALCULATION
+  let subImpact = null;
+  const timeline = currentMatch.timeline || [];
+  const firstSubIdx = timeline.findIndex((t: any) => t.type === 'sub');
+  
+  if (firstSubIdx !== -1) {
+    const subEvent = timeline[firstSubIdx];
+    // Find the rally immediately following this substitution by score or timeline order
+    // Since timeline interleaves timeouts, subs, and rallies, we can just split rallies by looking at their index in timeline
+    const ralliesBefore = timeline.slice(0, firstSubIdx).filter((t: any) => t.type === 'rally').map((t: any) => t.data);
+    const ralliesAfter = timeline.slice(firstSubIdx + 1).filter((t: any) => t.type === 'rally').map((t: any) => t.data);
+    
+    const calcImpact = (rallyArray: any[]) => {
+      let pos = 0, neg = 0, neu = 0;
+      let recAttempts = 0, recPerfect = 0, attAttempts = 0, attKills = 0, attErrors = 0;
+      rallyArray.forEach((r: any) => {
+        if (r.actions && r.actions.length > 0) {
+          r.actions.forEach((a: any) => {
+            const q = (a.quality === 'pos' || a.quality === '+') ? 'pos' : (a.quality === 'neg' || a.quality === '-') ? 'neg' : 'neu';
+            if (q === 'pos') pos++; else if (q === 'neg') neg++; else neu++;
+            
+            const g = a.gesture?.toLowerCase();
+            if (g === 'recepción' || g === 'recepcion') {
+              recAttempts++;
+              if (q === 'pos') recPerfect++;
+            }
+            if (g === 'ataque' || g === 'ataque ') {
+              attAttempts++;
+              if (q === 'pos') attKills++;
+              if (q === 'neg') attErrors++;
+            }
+          });
+        }
+      });
+      const balance = pos - neg; // Simplified global balance
+      const recEff = recAttempts > 0 ? Math.round((recPerfect / recAttempts) * 100) : 0;
+      const attEff = attAttempts > 0 ? Math.round(((attKills - attErrors) / attAttempts) * 100) : 0;
+      return { balance, recEff, attEff };
+    };
+
+    subImpact = {
+      subDetails: subEvent,
+      before: calcImpact(ralliesBefore),
+      after: calcImpact(ralliesAfter)
+    };
+  }
+
   return {
     match: currentMatch,
     rallies,
@@ -191,6 +266,8 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
     ),
     sideOutPct: sideOutChances > 0 ? Math.round((sideOutSuccess/sideOutChances)*100) : 0,
     transPct: transitionChances > 0 ? Math.round((transitionSuccess/transitionChances)*100) : 0,
+    historicalAvg: { sideOut: histSideOutAvg, trans: histTransAvg },
+    subImpact
   };
 }
 
