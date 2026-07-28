@@ -100,7 +100,7 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
       r.actions.forEach((a: any) => {
         if (!a.playerId || !pStats[a.playerId]) return;
         const s = pStats[a.playerId];
-        const q = a.quality === '+' ? 'pos' : a.quality === '-' ? 'neg' : 'neu';
+        const q = (a.quality === 'pos' || a.quality === '+') ? 'pos' : (a.quality === 'neg' || a.quality === '-') ? 'neg' : 'neu';
         
         teamBalance[q]++;
         
