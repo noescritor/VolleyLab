@@ -1,8 +1,11 @@
 import React, { useState, useMemo, useRef } from 'react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import { Download, Loader2, Plus, Target, Shield, Zap, Activity, Calendar, MapPin, Users } from 'lucide-react';
+import { PrintableMatchReport } from './analytics/PrintableMatchReport';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, ReferenceLine } from 'recharts';
-import { Plus, Target, Shield, Zap, Activity, Calendar, MapPin, Users, Loader2 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { useApp } from '../utils/AppContext';
 import { AdvancedHeatmapDashboard } from './AdvancedHeatmapDashboard';
