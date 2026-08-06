@@ -273,14 +273,20 @@ function Net() {
 /* ═══════════════════════════════════════════
    LIVE ANALYTICS VIEW
 ═══════════════════════════════════════════ */
-function LiveAnalytics({ rallies, players, onClose }: any) {
+function LiveAnalytics({ rallies, players, onClose, currentRallyActions }: any) {
   const [filterType, setFilterType] = useState<"all"|"our"|"rival">("all");
   const [selectedPlayerId, setSelectedPlayerId] = useState<string|null>(null);
 
   // Aggregate stats from rallies
   const stats: any = {};
   players.forEach((p: any) => {
-    stats[p.id] = { id: p.id, name: shortName(p.name), attacks: 0, kills: 0, errors: 0, blocks: 0 };
+    stats[p.id] = { 
+      id: p.id, name: shortName(p.name), 
+      attacks: 0, kills: 0, errors: 0, blocks: 0,
+      serves: 0, aces: 0, serveErr: 0,
+      receptions: 0, recPos: 0,
+      defenses: 0
+    };
   });
 
   let totalKills = 0;
@@ -299,17 +305,28 @@ function LiveAnalytics({ rallies, players, onClose }: any) {
       if (a.gesture === "bloqueo" && a.quality === "pos") {
         stats[a.playerId].blocks++;
       }
+      if (a.gesture === "saque") {
+        stats[a.playerId].serves++;
+        if (a.quality === "pos") stats[a.playerId].aces++;
+        if (a.quality === "neg") stats[a.playerId].serveErr++;
+      }
+      if (a.gesture === "recepcion" || a.gesture === "recepción") {
+        stats[a.playerId].receptions++;
+        if (a.quality === "pos") stats[a.playerId].recPos++;
+      }
+      if (a.gesture === "defensa") {
+        stats[a.playerId].defenses++;
+      }
     });
   });
 
-  const statList = Object.values(stats).filter((s: any) => s.attacks > 0 || s.blocks > 0 || s.kills > 0 || s.errors > 0);
+  const statList = Object.values(stats).filter((s: any) => s.attacks > 0 || s.blocks > 0 || s.kills > 0 || s.errors > 0 || s.serves > 0 || s.receptions > 0 || s.defenses > 0);
 
   // Compute points for heatmap based on filters
   const heatPoints = rallies.filter((r: any) => {
     if (filterType === "our" && r.winner !== "our") return false;
     if (filterType === "rival" && r.winner !== "rival") return false;
     if (selectedPlayerId) {
-      // Did this player participate in the actions of this rally?
       const participated = r.actions.some((a: any) => a.playerId === selectedPlayerId);
       if (!participated) return false;
     }
@@ -318,26 +335,41 @@ function LiveAnalytics({ rallies, players, onClose }: any) {
 
   const teamEff = totalAttacks > 0 ? Math.round(((totalKills - totalErrors) / totalAttacks) * 100) : 0;
 
-  const renderHeatZone = (zoneId: string) => {
-    const count = heatPoints.filter((r:any) => r.endLocation === zoneId).length;
-    const max = Math.max(1, heatPoints.length);
-    const intensity = Math.min(1, (count / max) * 1.5); 
-    
-    const baseColor = filterType === "our" ? "29, 158, 117" : filterType === "rival" ? "216, 90, 48" : "127, 119, 221";
+  // New Metrics
+  const lostServes = (currentRallyActions || []).filter((a:any) => a.gesture === 'saque' && a.quality === 'neg').length 
+                   + rallies.flatMap((r:any) => r.actions).filter((a:any) => a.gesture === 'saque' && a.quality === 'neg').length;
 
-    return (
-      <div key={zoneId} style={{
-        background: count > 0 ? `rgba(${baseColor}, ${intensity})` : "rgba(255,255,255,0.02)",
-        border: `1px solid ${C.bd}`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexDirection: "column",
-        transition: "background 0.3s ease"
-      }}>
-        {count > 0 && <span style={{ color:C.w, fontSize:18, fontWeight:600 }}>{count}</span>}
-        <span style={{ color:C.t3, fontSize:10 }}>Z{zoneId}</span>
-      </div>
-    );
-  };
+  const rotationStats: Record<string, { win: number, lose: number }> = {};
+  rallies.forEach((r:any) => {
+    if (r.lineup && r.lineup.p1) {
+      const p1 = r.lineup.p1;
+      if (!rotationStats[p1]) rotationStats[p1] = { win: 0, lose: 0 };
+      if (r.winner === 'our') rotationStats[p1].win++;
+      else rotationStats[p1].lose++;
+    }
+  });
+  
+  let bestRotationPlayerId = null;
+  let bestRotationDiff = -999;
+  Object.keys(rotationStats).forEach(p1 => {
+    const diff = rotationStats[p1].win - rotationStats[p1].lose;
+    if (diff > bestRotationDiff) {
+      bestRotationDiff = diff;
+      bestRotationPlayerId = p1;
+    }
+  });
+  
+  const bestRotationName = bestRotationPlayerId ? (players.find((p:any) => p.id === bestRotationPlayerId)?.name || '') : 'N/A';
+
+  const courtImpacts = heatPoints
+    .filter((r: any) => r.impact && r.impact.plane === 'court' && r.impact.x !== undefined && r.impact.y !== undefined)
+    .map((r: any) => ({
+      x: r.impact.x,
+      y: r.impact.y,
+      weight: r.impact.weight || (r.winner === 'our' ? 2 : 1),
+      type: r.impact.type || (r.winner === 'our' ? 'positive' : 'negative'),
+      out: r.impact.out
+    }));
 
   return (
     <div style={{
@@ -369,23 +401,15 @@ function LiveAnalytics({ rallies, players, onClose }: any) {
             <button onClick={()=>setFilterType("rival")} style={{ flex:1, padding:8, borderRadius:6, fontSize:12, background: filterType==="rival"?C.rdBg:"transparent", border:`1px solid ${filterType==="rival"?C.rd:C.bd}`, color: filterType==="rival"?C.rdLt:C.t2, transition: "all 0.2s" }}>En Contra</button>
           </div>
 
-          <div style={{ position:"relative", width: "100%", maxWidth: 280, margin: "0 auto", aspectRatio: "1" }}>
-            <div style={{ 
-              width: "100%", height: "100%",
-              display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(2, 1fr)",
-              gap: 2, padding: 2, background: "rgba(255,255,255,0.02)", border: `2px solid ${C.bdMed}`
-            }}>
-              {["4","3","2","5","6","1"].map(renderHeatZone)}
-            </div>
-            <div style={{ position:"absolute", bottom:-2, left:0, right:0, height:4, background:C.w, opacity:0.8 }} />
-            <div style={{ color: C.t3, fontSize: 10, textAlign:"center", marginTop: 12, letterSpacing: "0.1em" }}>RED / NUESTRA CANCHA AQUÍ ABAJO</div>
+          <div style={{ position:"relative", width: "100%", maxWidth: 280, margin: "0 auto" }}>
+            <CourtHeatmap impacts={courtImpacts} mode="view" />
           </div>
         </div>
 
         {/* TEAM SUMMARY */}
         <div style={{ background:C.card, border:`1px solid ${C.bd}`, borderRadius:12, padding:16 }}>
           <h3 style={{ color:C.t1, fontSize:14, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:12 }}>Métricas de Equipo</h3>
-          <div style={{ display:"flex", gap:12, marginBottom: 20 }}>
+          <div style={{ display:"flex", gap:12, marginBottom: 12 }}>
             <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", padding: 12, borderRadius: 8 }}>
               <div style={{ color:C.t3, fontSize:11, textTransform:"uppercase" }}>Total Rallies</div>
               <div style={{ color:C.w, fontSize:24, fontWeight:600 }}>{rallies.length}</div>
@@ -393,6 +417,16 @@ function LiveAnalytics({ rallies, players, onClose }: any) {
             <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", padding: 12, borderRadius: 8 }}>
               <div style={{ color:C.t3, fontSize:11, textTransform:"uppercase" }}>Eficiencia</div>
               <div style={{ color: teamEff > 30 ? C.gnLt : teamEff < 0 ? C.rdLt : C.w, fontSize:24, fontWeight:600 }}>{teamEff}%</div>
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:12, marginBottom: 20 }}>
+            <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", padding: 12, borderRadius: 8 }}>
+              <div style={{ color:C.t3, fontSize:11, textTransform:"uppercase" }}>Saques Perdidos</div>
+              <div style={{ color:C.rdLt, fontSize:20, fontWeight:600 }}>{lostServes}</div>
+            </div>
+            <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", padding: 12, borderRadius: 8 }}>
+              <div style={{ color:C.t3, fontSize:11, textTransform:"uppercase" }}>Mejor Rotación (Al saque)</div>
+              <div style={{ color:C.gnLt, fontSize:14, fontWeight:600, marginTop:4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{shortName(bestRotationName)}</div>
             </div>
           </div>
           
@@ -415,20 +449,23 @@ function LiveAnalytics({ rallies, players, onClose }: any) {
           
           {statList.length > 0 ? (
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width:"100%", textAlign:"left", borderCollapse:"collapse", color:C.t1, fontSize:13, minWidth: 400 }}>
+              <table style={{ width:"100%", textAlign:"left", borderCollapse:"collapse", color:C.t1, fontSize:13, minWidth: 600 }}>
                 <thead>
                   <tr style={{ borderBottom:`1px solid ${C.bdMed}`, color:C.t3 }}>
                     <th style={{ paddingBottom:12, fontWeight:500 }}>Jugador</th>
                     <th style={{ paddingBottom:12, fontWeight:500 }}>Atq</th>
                     <th style={{ paddingBottom:12, fontWeight:500, color:C.gnLt }}>Kill</th>
                     <th style={{ paddingBottom:12, fontWeight:500, color:C.rdLt }}>Err</th>
-                    <th style={{ paddingBottom:12, fontWeight:500 }}>Blk</th>
-                    <th style={{ paddingBottom:12, fontWeight:500 }}>EFF</th>
+                    <th style={{ paddingBottom:12, fontWeight:500 }}>EFF%</th>
+                    <th style={{ paddingBottom:12, fontWeight:500, borderLeft:`1px solid ${C.bd}`, paddingLeft: 8 }}>Saq(A/E)</th>
+                    <th style={{ paddingBottom:12, fontWeight:500, borderLeft:`1px solid ${C.bd}`, paddingLeft: 8 }}>Rec(Pos)</th>
+                    <th style={{ paddingBottom:12, fontWeight:500, borderLeft:`1px solid ${C.bd}`, paddingLeft: 8 }}>Def</th>
                   </tr>
                 </thead>
                 <tbody>
                   {statList.map((s: any, i) => {
                     const eff = s.attacks > 0 ? Math.round(((s.kills - s.errors) / s.attacks) * 100) : 0;
+                    const recEff = s.receptions > 0 ? Math.round((s.recPos / s.receptions) * 100) : 0;
                     const isSel = selectedPlayerId === s.id;
                     return (
                       <tr key={i} onClick={() => setSelectedPlayerId(isSel ? null : s.id)} 
@@ -442,8 +479,10 @@ function LiveAnalytics({ rallies, players, onClose }: any) {
                         <td style={{ padding:"12px 8px" }}>{s.attacks}</td>
                         <td style={{ padding:"12px 8px", color:C.gnLt }}>{s.kills}</td>
                         <td style={{ padding:"12px 8px", color:C.rdLt }}>{s.errors}</td>
-                        <td style={{ padding:"12px 8px" }}>{s.blocks}</td>
                         <td style={{ padding:"12px 8px", fontWeight:600, color: eff > 30 ? C.gnLt : eff < 0 ? C.rdLt : C.w }}>{eff}%</td>
+                        <td style={{ padding:"12px 8px", borderLeft:`1px solid ${C.bd}` }}>{s.aces} / {s.serveErr}</td>
+                        <td style={{ padding:"12px 8px", borderLeft:`1px solid ${C.bd}` }}>{recEff}%</td>
+                        <td style={{ padding:"12px 8px", borderLeft:`1px solid ${C.bd}` }}>{s.defenses}</td>
                       </tr>
                     );
                   })}
@@ -518,6 +557,46 @@ export default function LiveMatchCenter() {
   const [subsUsed, setSubsUsed] = useState(0);
   const [ourTimeouts, setOurTimeouts] = useState(0);
   const [rivalTimeouts, setRivalTimeouts] = useState(0);
+
+  // --- HYDRATION ---
+  useEffect(() => {
+    const saved = localStorage.getItem("volleyLab_liveMatch");
+    if (saved) {
+      try {
+        const s = JSON.parse(saved);
+        if (s.opponent) setOpponent(s.opponent);
+        if (s.matchType) setMatchType(s.matchType);
+        if (s.subRule) setSubRule(s.subRule);
+        if (s.screen) setScreen(s.screen);
+        if (s.setNum) setSetNum(s.setNum);
+        if (s.lineup) setLineup(s.lineup);
+        if (s.allRallies) setAllRallies(s.allRallies);
+        if (s.timeline) setTimeline(s.timeline);
+        if (s.setsScores) setSetsScores(s.setsScores);
+        if (s.currentRallyActions) setCurrentRallyActions(s.currentRallyActions);
+        if (s.ourScore) setOurScore(s.ourScore);
+        if (s.rivalScore) setRivalScore(s.rivalScore);
+        if (s.subsUsed) setSubsUsed(s.subsUsed);
+        if (s.ourTimeouts) setOurTimeouts(s.ourTimeouts);
+        if (s.rivalTimeouts) setRivalTimeouts(s.rivalTimeouts);
+      } catch (e) {
+        console.error("Error loading match state", e);
+      }
+    }
+  }, []);
+
+  // --- AUTO-SAVE ---
+  useEffect(() => {
+    if (screen !== "setup") {
+      const stateToSave = {
+        opponent, matchType, subRule, screen, setNum, lineup,
+        allRallies, timeline, setsScores, currentRallyActions,
+        ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts
+      };
+      localStorage.setItem("volleyLab_liveMatch", JSON.stringify(stateToSave));
+    }
+  }, [opponent, matchType, subRule, screen, setNum, lineup, allRallies, timeline, setsScores, currentRallyActions, ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts]);
+
 
   /* — Derived Players — */
   const benchPlayers = useMemo(() => luBench(lineup, players), [lineup, players]);
@@ -611,7 +690,8 @@ export default function LiveMatchCenter() {
         id: Date.now().toString(),
         winner: 'rival',
         endLocation: 'falta',
-        actions: finalActions
+        actions: finalActions,
+        lineup: dc(lineup)
       };
       setAllRallies(prev => [...prev, newRally]);
       setTimeline(prev => [...prev, { type: 'rally', data: newRally }]);
@@ -658,7 +738,8 @@ export default function LiveMatchCenter() {
       winner: pendingEndResult.winner,
       endLocation: targetZone,
       impact: skipHeatmap ? null : { ...finalImpact, plane },
-      actions: finalActions
+      actions: finalActions,
+      lineup: dc(lineup)
     };
     setAllRallies(prev => [...prev, newRally]);
     setTimeline(prev => [...prev, { type: 'rally', data: newRally }]);
@@ -939,7 +1020,7 @@ export default function LiveMatchCenter() {
   ══════════════════════════════════ */
   return (
     <>
-      {showAnalytics && <LiveAnalytics rallies={allRallies} players={players} onClose={() => setShowAnalytics(false)} />}
+      {showAnalytics && <LiveAnalytics rallies={allRallies} players={players} onClose={() => setShowAnalytics(false)} currentRallyActions={currentRallyActions} />}
       
       {/* ERROR REASON MODAL */}
       {pendingError && (
