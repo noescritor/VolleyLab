@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 
-import { Download, Loader2, Plus, Target, Shield, Zap, Activity, Calendar, MapPin, Users } from 'lucide-react';
+import { Download, Loader2, Plus, Target, Shield, Zap, Activity, Calendar, MapPin, Users, TrendingUp } from 'lucide-react';
 import { PrintableMatchReport } from './analytics/PrintableMatchReport';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
