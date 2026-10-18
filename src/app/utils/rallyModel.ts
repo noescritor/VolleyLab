@@ -505,3 +505,173 @@ export function computePointsByOrigin(rallies: Rally[]): SetPointsOrigin[] {
 
   return [...sortedSets, total];
 }
+
+/**
+ * Estadísticas de saque por jugador, tipo y zonas de destino
+ */
+export interface ServeStatItem {
+  attempts: number;
+  aces: number;       // #
+  positive: number;   // +
+  neutral: number;    // !
+  negative: number;   // -
+  errors: number;     // =
+  efficiencyPct: number; // (aces - errors) / attempts * 100
+}
+
+export interface ServeStatSummary {
+  byPlayer: Record<string, ServeStatItem>;
+  byType: Record<ServeType, ServeStatItem>;
+  destinations: Record<CourtZone, number>;
+  total: ServeStatItem;
+}
+
+export function computeServeStats(rallies: Rally[]): ServeStatSummary {
+  const createItem = (): ServeStatItem => ({
+    attempts: 0,
+    aces: 0,
+    positive: 0,
+    neutral: 0,
+    negative: 0,
+    errors: 0,
+    efficiencyPct: 0
+  });
+
+  const summary: ServeStatSummary = {
+    byPlayer: {},
+    byType: {
+      flotado: createItem(),
+      salto: createItem(),
+      salto_flotado: createItem()
+    },
+    destinations: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+    total: createItem()
+  };
+
+  const updateItem = (item: ServeStatItem, q: Quality) => {
+    item.attempts++;
+    if (q === '#') item.aces++;
+    else if (q === '+') item.positive++;
+    else if (q === '!') item.neutral++;
+    else if (q === '-') item.negative++;
+    else if (q === '=') item.errors++;
+    item.efficiencyPct = item.attempts > 0
+      ? Math.round(((item.aces - item.errors) / item.attempts) * 100)
+      : 0;
+  };
+
+  rallies.forEach(rally => {
+    (rally.actions || []).forEach(action => {
+      const g = String(action.gesture).toLowerCase();
+      if (action.team === 'our' && g === 'saque') {
+        const q = normalizeQuality(action.quality);
+        updateItem(summary.total, q);
+
+        if (action.playerId) {
+          if (!summary.byPlayer[action.playerId]) summary.byPlayer[action.playerId] = createItem();
+          updateItem(summary.byPlayer[action.playerId], q);
+        }
+
+        const sType = action.detail?.serveType;
+        if (sType && summary.byType[sType]) {
+          updateItem(summary.byType[sType], q);
+        }
+
+        const sTo = action.detail?.serveTo;
+        if (sTo && sTo >= 1 && sTo <= 6) {
+          summary.destinations[sTo as CourtZone] = (summary.destinations[sTo as CourtZone] || 0) + 1;
+        }
+      }
+    });
+  });
+
+  return summary;
+}
+
+/**
+ * Matriz de distribución del colocador según la calidad de la recepción previa
+ */
+export interface SetterDistributionMatrix {
+  matrix: Record<'#' | '+' | '!' | '-', Record<SetTarget, number>>;
+  totalsByQuality: Record<'#' | '+' | '!' | '-', number>;
+  totalsByTarget: Record<SetTarget, number>;
+  percentages: Record<'#' | '+' | '!' | '-', Record<SetTarget, number>>;
+  totalSets: number;
+}
+
+export function computeSetterDistribution(rallies: Rally[]): SetterDistributionMatrix {
+  const targets: SetTarget[] = [4, 3, 2, 6, 1];
+  const qualities: ('#' | '+' | '!' | '-')[] = ['#', '+', '!', '-'];
+
+  const matrix: Record<'#' | '+' | '!' | '-', Record<SetTarget, number>> = {
+    '#': { 4: 0, 3: 0, 2: 0, 6: 0, 1: 0 },
+    '+': { 4: 0, 3: 0, 2: 0, 6: 0, 1: 0 },
+    '!': { 4: 0, 3: 0, 2: 0, 6: 0, 1: 0 },
+    '-': { 4: 0, 3: 0, 2: 0, 6: 0, 1: 0 },
+  };
+
+  const totalsByQuality: Record<'#' | '+' | '!' | '-', number> = {
+    '#': 0, '+': 0, '!': 0, '-': 0
+  };
+
+  const totalsByTarget: Record<SetTarget, number> = {
+    4: 0, 3: 0, 2: 0, 6: 0, 1: 0
+  };
+
+  let totalSets = 0;
+
+  rallies.forEach(rally => {
+    const actions = rally.actions || [];
+    for (let i = 0; i < actions.length; i++) {
+      const a = actions[i];
+      const g = String(a.gesture).toLowerCase();
+      if (a.team === 'our' && (g === 'armado' || g === 'acomodo') && a.detail?.setTarget) {
+        const target = a.detail.setTarget;
+        if (!targets.includes(target)) continue;
+
+        // Buscar la recepción previa más reciente de nuestro equipo
+        let prevRecQuality: ('#' | '+' | '!' | '-') | null = null;
+        for (let j = i - 1; j >= 0; j--) {
+          const prev = actions[j];
+          const prevG = String(prev.gesture).toLowerCase();
+          if (prev.team === 'our' && (prevG === 'recepcion' || prevG === 'recepción')) {
+            const nq = normalizeQuality(prev.quality);
+            if (qualities.includes(nq as any)) {
+              prevRecQuality = nq as ('#' | '+' | '!' | '-');
+            }
+            break;
+          }
+        }
+
+        if (prevRecQuality) {
+          matrix[prevRecQuality][target]++;
+          totalsByQuality[prevRecQuality]++;
+          totalsByTarget[target]++;
+          totalSets++;
+        }
+      }
+    }
+  });
+
+  const percentages: Record<'#' | '+' | '!' | '-', Record<SetTarget, number>> = {
+    '#': { 4: 0, 3: 0, 2: 0, 6: 0, 1: 0 },
+    '+': { 4: 0, 3: 0, 2: 0, 6: 0, 1: 0 },
+    '!': { 4: 0, 3: 0, 2: 0, 6: 0, 1: 0 },
+    '-': { 4: 0, 3: 0, 2: 0, 6: 0, 1: 0 },
+  };
+
+  qualities.forEach(q => {
+    const totalQ = totalsByQuality[q];
+    targets.forEach(t => {
+      percentages[q][t] = totalQ > 0 ? Math.round((matrix[q][t] / totalQ) * 100) : 0;
+    });
+  });
+
+  return {
+    matrix,
+    totalsByQuality,
+    totalsByTarget,
+    percentages,
+    totalSets
+  };
+}

@@ -1,6 +1,13 @@
 import React from 'react';
 import { CourtHeatmap } from '../live-match/CourtHeatmap';
 import { NetHeatmap } from '../live-match/NetHeatmap';
+import {
+  computeRotationStats,
+  computeSetterDistribution,
+  computePointsByOrigin,
+  Rotation,
+  SetTarget
+} from '../../utils/rallyModel';
 
 interface PrintableMatchReportProps {
   dynStats: any;
@@ -19,6 +26,11 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
   if (!dynStats || !match) return null;
 
   const { teamBalance, rallies, sideOutPct, transPct, errorPhaseFreq, historicalAvg, subImpact, momentum } = dynStats;
+
+  const isV2 = (rallies || []).some((r: any) => r.rotation !== undefined || r.phase !== undefined || r.servingTeam !== undefined);
+  const rotationStats = computeRotationStats(rallies || []);
+  const setterDist = computeSetterDistribution(rallies || []);
+  const pointsOrigin = computePointsByOrigin(rallies || []);
 
   const PRINT_STYLES = `
     @media print {
@@ -57,7 +69,7 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
         APP.VOLLEYLAB.COM
       </div>
       <div className="absolute right-[40px] bottom-[20px] font-mono text-[11px] tracking-[1.4px] text-white/45">
-        PÁG {pageNum}/04
+        PÁG {pageNum}/05
       </div>
       <div className="dot-grid" />
     </>
@@ -363,6 +375,135 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
               })}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* ================= PAGE 5 ================= */}
+      <div className="a4-page">
+        <PageHeader pageNum="05" title="05 — Táctica, Rotaciones y Distribución" />
+        
+        <div className="absolute left-[40px] top-[110px] w-[714px] space-y-6">
+          {/* Rotaciones */}
+          <div>
+            <div className="font-medium text-[16px] text-[#A191FF] mb-2">
+              Rendimiento por Rotación (P1 a P6)
+            </div>
+            {!isV2 ? (
+              <div className="text-white/40 text-[12px] py-4">Métricas de rotación disponibles en partidos registrados con v2.</div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10 font-mono text-[10px] tracking-[1px] text-white/40 uppercase">
+                    <th className="pb-2">Rotación</th>
+                    <th className="pb-2 text-center">Side-Out % (K1)</th>
+                    <th className="pb-2 text-center">Break Point % (K2)</th>
+                    <th className="pb-2 text-center">K1 Ganados/Tot</th>
+                    <th className="pb-2 text-center">K2 Ganados/Tot</th>
+                    <th className="pb-2 text-center">Dif. Puntos</th>
+                  </tr>
+                </thead>
+                <tbody className="text-[12px]">
+                  {([1, 2, 3, 4, 5, 6] as Rotation[]).map(rot => {
+                    const s = rotationStats[rot];
+                    return (
+                      <tr key={rot} className="border-b border-white/[0.04]">
+                        <td className="py-2 font-mono font-bold text-[#A191FF]">P{rot}</td>
+                        <td className="py-2 text-center font-mono text-white">{s.sideOutPct}%</td>
+                        <td className="py-2 text-center font-mono text-white">{s.breakPointPct}%</td>
+                        <td className="py-2 text-center font-mono text-white/60">{s.k1Wins}/{s.k1Rallies}</td>
+                        <td className="py-2 text-center font-mono text-white/60">{s.k2Wins}/{s.k2Rallies}</td>
+                        <td className="py-2 text-center font-mono font-bold text-white">
+                          {s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Distribución del Colocador */}
+          <div>
+            <div className="font-medium text-[16px] text-[#A191FF] mb-2">
+              Distribución del Colocador (Recepción previa vs Destino)
+            </div>
+            {setterDist.totalSets === 0 ? (
+              <div className="text-white/40 text-[12px] py-4">Sin datos de colocación con destino (modo Completo).</div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10 font-mono text-[10px] tracking-[1px] text-white/40 uppercase">
+                    <th className="pb-2">Pase Previo</th>
+                    <th className="pb-2 text-center text-[#A191FF]">Z4 (Punta)</th>
+                    <th className="pb-2 text-center text-[#91FFB0]">Z3 (Central)</th>
+                    <th className="pb-2 text-center text-[#91CAFF]">Z2 (Opuesto)</th>
+                    <th className="pb-2 text-center text-[#FFD391]">Pipe (Z6)</th>
+                    <th className="pb-2 text-center text-white/70">Zaga (Z1)</th>
+                    <th className="pb-2 text-center text-white">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="text-[12px]">
+                  {([
+                    { q: '#' as const, label: 'Perfecta (#)' },
+                    { q: '+' as const, label: 'Positiva (+)' },
+                    { q: '!' as const, label: 'Regular (!)' },
+                    { q: '-' as const, label: 'Mala (-)' }
+                  ]).map(({ q, label }) => {
+                    const totalQ = setterDist.totalsByQuality[q];
+                    return (
+                      <tr key={q} className="border-b border-white/[0.04]">
+                        <td className="py-2 font-mono text-white">{label}</td>
+                        {([4, 3, 2, 6, 1] as SetTarget[]).map(t => (
+                          <td key={t} className="py-2 text-center font-mono text-white">
+                            {setterDist.matrix[q][t]} <span className="text-[10px] text-white/40">({setterDist.percentages[q][t]}%)</span>
+                          </td>
+                        ))}
+                        <td className="py-2 text-center font-mono font-bold text-white">{totalQ}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Origen de Puntos */}
+          <div>
+            <div className="font-medium text-[16px] text-[#A191FF] mb-2">
+              Origen de Puntos por Set
+            </div>
+            {pointsOrigin.length === 0 ? (
+              <div className="text-white/40 text-[12px] py-4">Sin datos de puntos por set.</div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10 font-mono text-[10px] tracking-[1px] text-white/40 uppercase">
+                    <th className="pb-2">Set</th>
+                    <th className="pb-2 text-center text-[#91FFB0]">Ganados</th>
+                    <th className="pb-2 text-center text-[#A191FF]">Error Rival</th>
+                    <th className="pb-2 text-center text-white">Total Propios</th>
+                    <th className="pb-2 text-center text-white/60">Rival Ganados</th>
+                    <th className="pb-2 text-center text-[#FF919F]">Error Nuestro</th>
+                    <th className="pb-2 text-center text-white">Total Rival</th>
+                  </tr>
+                </thead>
+                <tbody className="text-[12px]">
+                  {pointsOrigin.map((s, idx) => (
+                    <tr key={idx} className={s.setNum === 'total' ? 'border-t border-white/20 font-bold bg-white/[0.02]' : 'border-b border-white/[0.04]'}>
+                      <td className="py-2 font-mono text-white">{s.setNum === 'total' ? 'TOTAL' : `Set ${s.setNum}`}</td>
+                      <td className="py-2 text-center font-mono text-[#91FFB0]">{s.ganado}</td>
+                      <td className="py-2 text-center font-mono text-[#A191FF]">{s.regalado_rival}</td>
+                      <td className="py-2 text-center font-mono text-white font-bold">{s.totalOurPoints}</td>
+                      <td className="py-2 text-center font-mono text-white/60">{s.perdido}</td>
+                      <td className="py-2 text-center font-mono text-[#FF919F]">{s.regalado_nuestro}</td>
+                      <td className="py-2 text-center font-mono text-white font-bold">{s.totalRivalPoints}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       </div>
     </div>

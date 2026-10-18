@@ -13,9 +13,15 @@ import {
   computeReceptionStats,
   computeAttackStats,
   computePointsByOrigin,
+  computeServeStats,
+  computeSetterDistribution,
+  normalizeQuality,
   Rotation,
   AttackZone,
-  AttackType
+  AttackType,
+  ServeType,
+  SetTarget,
+  CourtZone
 } from '../utils/rallyModel';
 
 const INPUT_CLS = 'w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2.5 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#A191FF]/50 transition-colors';
@@ -123,7 +129,8 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
       r.actions.forEach((a: any) => {
         if (!a.playerId || !pStats[a.playerId]) return;
         const s = pStats[a.playerId];
-        const q = (a.quality === 'pos' || a.quality === '+') ? 'pos' : (a.quality === 'neg' || a.quality === '-') ? 'neg' : 'neu';
+        const nq = normalizeQuality(a.quality);
+        const q = (nq === '#' || nq === '+') ? 'pos' : (nq === '=' || nq === '-') ? 'neg' : 'neu';
         
         teamBalance[q]++;
         
@@ -138,21 +145,21 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
         if (g === 'ataque' || g === 'ataque ' || g === 'dejada') {
           s.attacks[q]++;
           s.attacks.attempts++;
-          if (q === 'pos') s.attacks.kills++;
+          if (nq === '#') s.attacks.kills++;
         }
         else if (g === 'saque') {
           s.serves[q]++;
-          if (q === 'pos') s.serves.aces++;
-          if (q === 'neg') s.serves.errors++;
+          if (nq === '#') s.serves.aces++;
+          if (nq === '=') s.serves.errors++;
         }
         else if (g === 'recepción' || g === 'recepcion') {
           s.receptions[q]++;
           s.receptions.attempts++;
-          if (q === 'pos') s.receptions.perfect++;
+          if (nq === '#') s.receptions.perfect++;
         }
         else if (g === 'bloqueo') {
           s.blocks[q]++;
-          if (q === 'pos') s.blocks.stuffs++;
+          if (nq === '#') s.blocks.stuffs++;
         }
         else if (g === 'defensa') {
           s.digs[q]++;
@@ -317,6 +324,7 @@ export function MatchAnalytics() {
   const [selectedMatch, setSelectedMatch] = useState('');
   const [activeTab, setActiveTab] = useState<'heatmaps'|'efficiency'|'tactics'|'kpis'|'timeline'|'insights'>('efficiency');
   const [attackBreakdownTab, setAttackBreakdownTab] = useState<'player' | 'zone' | 'type' | 'blockers'>('player');
+  const [serveBreakdownTab, setServeBreakdownTab] = useState<'player' | 'type' | 'destinations'>('player');
   const [selectedFundament, setSelectedFundament] = useState('attacks');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -401,13 +409,21 @@ export function MatchAnalytics() {
       Object.values(attackStats.byType).some(t => t.attempts > 0) ||
       Object.values(attackStats.byZone).some(z => z.attempts > 0);
 
+    const serveStats = computeServeStats(rallies);
+    const setterDistribution = computeSetterDistribution(rallies);
+    const hasDetailedServe = Object.values(serveStats.byType).some(t => t.attempts > 0) ||
+      Object.values(serveStats.destinations).some(d => d > 0);
+
     return {
       isV2,
       rotationStats,
       receptionStats,
       attackStats,
       pointsOrigin,
-      hasDetailedAttack
+      hasDetailedAttack,
+      serveStats,
+      setterDistribution,
+      hasDetailedServe
     };
   }, [dynStats?.rallies]);
 
@@ -1106,6 +1122,263 @@ export function MatchAnalytics() {
                         </table>
                       </div>
                     )}
+                  </div>
+                )}
+              </div>
+
+              {/* 5. SECCIÓN SAQUE */}
+              <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-[13px] font-semibold text-white">5. Eficacia y Control de Saque</h4>
+                    <p className="text-[11px] text-white/40">Aces, errores directos, calidad del servicio y zonas de destino</p>
+                  </div>
+
+                  {/* Subtabs for serve breakdown */}
+                  <div className="flex gap-1 bg-white/[0.04] p-1 rounded-md border border-white/[0.06] self-start sm:self-auto flex-wrap">
+                    <button
+                      onClick={() => setServeBreakdownTab('player')}
+                      className={`px-3 py-1 text-[11px] font-mono uppercase rounded transition-colors ${
+                        serveBreakdownTab === 'player' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/50 hover:text-white'
+                      }`}>
+                      Por Jugadora
+                    </button>
+                    <button
+                      onClick={() => setServeBreakdownTab('type')}
+                      className={`px-3 py-1 text-[11px] font-mono uppercase rounded transition-colors ${
+                        serveBreakdownTab === 'type' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/50 hover:text-white'
+                      }`}>
+                      Por Tipo
+                    </button>
+                    <button
+                      onClick={() => setServeBreakdownTab('destinations')}
+                      className={`px-3 py-1 text-[11px] font-mono uppercase rounded transition-colors ${
+                        serveBreakdownTab === 'destinations' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/50 hover:text-white'
+                      }`}>
+                      Mapa Destino (serveTo)
+                    </button>
+                  </div>
+                </div>
+
+                {!v2Stats.serveStats || v2Stats.serveStats.total.attempts === 0 ? (
+                  <div className="py-8 text-center border border-dashed border-white/[0.08] rounded-lg bg-white/[0.01]">
+                    <p className="text-[12px] text-white/50">Sin acciones de saque registradas en este partido.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Summary KPIs */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      <div className="bg-white/[0.02] border border-white/[0.06] p-3 rounded text-center">
+                        <span className="block font-mono text-[10px] text-white/40 uppercase">Total Saques</span>
+                        <span className="font-mono text-[18px] font-bold text-white">{v2Stats.serveStats.total.attempts}</span>
+                      </div>
+                      <div className="bg-white/[0.02] border border-white/[0.06] p-3 rounded text-center">
+                        <span className="block font-mono text-[10px] text-[#91FFB0] uppercase">Aces (#)</span>
+                        <span className="font-mono text-[18px] font-bold text-[#91FFB0]">{v2Stats.serveStats.total.aces}</span>
+                      </div>
+                      <div className="bg-white/[0.02] border border-white/[0.06] p-3 rounded text-center">
+                        <span className="block font-mono text-[10px] text-[#A191FF] uppercase">Positivos (+)</span>
+                        <span className="font-mono text-[18px] font-bold text-[#A191FF]">{v2Stats.serveStats.total.positive}</span>
+                      </div>
+                      <div className="bg-white/[0.02] border border-white/[0.06] p-3 rounded text-center">
+                        <span className="block font-mono text-[10px] text-[#FF919F] uppercase">Errores (=)</span>
+                        <span className="font-mono text-[18px] font-bold text-[#FF919F]">{v2Stats.serveStats.total.errors}</span>
+                      </div>
+                      <div className="bg-white/[0.02] border border-white/[0.06] p-3 rounded text-center col-span-2 sm:col-span-1">
+                        <span className="block font-mono text-[10px] text-[#FFD391] uppercase">Eficiencia %</span>
+                        <span className="font-mono text-[18px] font-bold text-[#FFD391]">{v2Stats.serveStats.total.efficiencyPct}%</span>
+                      </div>
+                    </div>
+
+                    {serveBreakdownTab === 'player' && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[620px]">
+                          <thead>
+                            <tr className="border-b border-white/[0.08] bg-white/[0.02]">
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40">Jugadora</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Total Saques</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#91FFB0] text-center">Aces (#)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#A191FF] text-center">Positivos (+)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FFD391] text-center">Regulares (!)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/50 text-center">Negativos (-)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FF919F] text-center">Errores (=)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white text-center">Eficiencia %</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/[0.06]">
+                            {Object.entries(v2Stats.serveStats.byPlayer).map(([pId, s]) => {
+                              const player = playerLookup.get(pId);
+                              const displayName = player ? `#${player.number ?? ''} ${player.name}` : `ID: ${pId.slice(0, 8)}`;
+                              return (
+                                <tr key={pId} className="hover:bg-white/[0.02] transition-colors">
+                                  <td className="px-4 py-3">
+                                    <p className="text-[13px] font-medium text-white">{displayName}</p>
+                                    {player?.position && <p className="text-[10px] text-white/40">{player.position}</p>}
+                                  </td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-white font-bold">{s.attempts}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#91FFB0]">{s.aces}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#A191FF]">{s.positive}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FFD391]">{s.neutral}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-white/50">{s.negative}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FF919F]">{s.errors}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] font-semibold text-[#FFD391]">
+                                    {s.efficiencyPct > 0 ? `+${s.efficiencyPct}` : s.efficiencyPct}%
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {serveBreakdownTab !== 'player' && !v2Stats.hasDetailedServe && (
+                      <div className="py-8 text-center border border-dashed border-white/[0.08] rounded-lg bg-white/[0.01]">
+                        <Info size={16} className="mx-auto text-white/30 mb-2" />
+                        <p className="text-[12px] text-white/50">
+                          Detalles de saque ({serveBreakdownTab === 'type' ? 'tipo de saque' : 'mapa de destino'}) disponibles en partidos registrados en modo Completo.
+                        </p>
+                      </div>
+                    )}
+
+                    {serveBreakdownTab === 'type' && v2Stats.hasDetailedServe && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[500px]">
+                          <thead>
+                            <tr className="border-b border-white/[0.08] bg-white/[0.02]">
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40">Tipo de Saque</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Intentos</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#91FFB0] text-center">Aces (#)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#A191FF] text-center">Positivos (+)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FF919F] text-center">Errores (=)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white text-center">Eficiencia %</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/[0.06]">
+                            {(['flotado', 'salto', 'salto_flotado'] as ServeType[]).map(st => {
+                              const s = v2Stats.serveStats.byType[st];
+                              const label = st === 'flotado' ? 'Saque Flotado' : st === 'salto' ? 'Saque Potencia / Salto' : 'Salto-Flotado';
+                              return (
+                                <tr key={st} className="hover:bg-white/[0.02] transition-colors">
+                                  <td className="px-4 py-3 font-medium text-[13px] text-white">{label}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-white font-bold">{s.attempts}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#91FFB0]">{s.aces}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#A191FF]">{s.positive}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FF919F]">{s.errors}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] font-semibold text-[#FFD391]">
+                                    {s.efficiencyPct > 0 ? `+${s.efficiencyPct}` : s.efficiencyPct}%
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {serveBreakdownTab === 'destinations' && v2Stats.hasDetailedServe && (
+                      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+                        {([1, 2, 3, 4, 5, 6] as CourtZone[]).map(z => {
+                          const count = v2Stats.serveStats.destinations[z] || 0;
+                          const totalServes = v2Stats.serveStats.total.attempts;
+                          const pct = totalServes > 0 ? Math.round((count / totalServes) * 100) : 0;
+                          return (
+                            <div key={z} className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-4 text-center">
+                              <span className="font-mono text-[11px] text-[#A191FF] uppercase font-bold block mb-1">Zona {z}</span>
+                              <span className="font-mono text-[22px] font-bold text-white block">{count}</span>
+                              <span className="font-mono text-[10px] text-white/40 block mt-1">{pct}% del total</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 6. SECCIÓN DISTRIBUCIÓN DEL COLOCADOR */}
+              <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-[13px] font-semibold text-white">6. Distribución del Colocador (Pase vs Destino)</h4>
+                    <p className="text-[11px] text-white/40">Frecuencia y porcentaje de armado según la calidad de la recepción previa</p>
+                  </div>
+                  <span className="font-mono text-[10px] text-white/40 uppercase">
+                    {v2Stats.setterDistribution.totalSets} Armados analizados
+                  </span>
+                </div>
+
+                {v2Stats.setterDistribution.totalSets === 0 ? (
+                  <div className="py-8 text-center border border-dashed border-white/[0.08] rounded-lg bg-white/[0.01]">
+                    <Info size={16} className="mx-auto text-white/30 mb-2" />
+                    <p className="text-[12px] text-white/50">
+                      Sin datos de distribución de colocador. Se requiere registrar recepción y armado con destino en el mismo rally (modo Completo).
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[620px]">
+                      <thead>
+                        <tr className="border-b border-white/[0.08] bg-white/[0.02]">
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40">Calidad Recepción Previa</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#A191FF] text-center">Z4 (Punta)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#91FFB0] text-center">Z3 (Central)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#91CAFF] text-center">Z2 (Opuesto)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FFD391] text-center">Pipe (Z6)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/70 text-center">Zaga (Z1)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white font-bold text-center">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/[0.06]">
+                        {([
+                          { q: '#' as const, label: 'Perfecta (#)', color: 'text-[#91FFB0]' },
+                          { q: '+' as const, label: 'Positiva (+)', color: 'text-[#A191FF]' },
+                          { q: '!' as const, label: 'Regular (!)', color: 'text-[#FFD391]' },
+                          { q: '-' as const, label: 'Mala (-)', color: 'text-[#FF919F]' }
+                        ]).map(({ q, label, color }) => {
+                          const totalQ = v2Stats.setterDistribution.totalsByQuality[q];
+                          return (
+                            <tr key={q} className="hover:bg-white/[0.02] transition-colors">
+                              <td className={`px-4 py-3 font-medium text-[13px] ${color}`}>
+                                {label}
+                              </td>
+                              {([4, 3, 2, 6, 1] as SetTarget[]).map(t => {
+                                const count = v2Stats.setterDistribution.matrix[q][t];
+                                const pct = v2Stats.setterDistribution.percentages[q][t];
+                                return (
+                                  <td key={t} className="px-4 py-3 text-center font-mono text-[12px]">
+                                    <span className="text-white font-bold">{count}</span>
+                                    <span className="text-[10px] text-white/40 ml-1.5">({pct}%)</span>
+                                  </td>
+                                );
+                              })}
+                              <td className="px-4 py-3 text-center font-mono text-[13px] font-bold text-white bg-white/[0.02]">
+                                {totalQ}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t border-white/[0.08] bg-white/[0.03] font-semibold">
+                          <td className="px-4 py-3 text-[12px] font-mono text-white/60 uppercase">Total Por Destino</td>
+                          {([4, 3, 2, 6, 1] as SetTarget[]).map(t => {
+                            const tot = v2Stats.setterDistribution.totalsByTarget[t];
+                            const totSets = v2Stats.setterDistribution.totalSets;
+                            const pct = totSets > 0 ? Math.round((tot / totSets) * 100) : 0;
+                            return (
+                              <td key={t} className="px-4 py-3 text-center font-mono text-[12px]">
+                                <span className="text-[#A191FF] font-bold">{tot}</span>
+                                <span className="text-[10px] text-white/40 ml-1.5">({pct}%)</span>
+                              </td>
+                            );
+                          })}
+                          <td className="px-4 py-3 text-center font-mono text-[13px] font-bold text-[#A191FF] bg-white/[0.04]">
+                            {v2Stats.setterDistribution.totalSets}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
                   </div>
                 )}
               </div>
