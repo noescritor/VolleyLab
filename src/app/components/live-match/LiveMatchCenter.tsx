@@ -12,7 +12,10 @@ import {
   Rotation,
   ServeType,
   CourtZone,
-  ActionDetail
+  ActionDetail,
+  AttackZone,
+  AttackType,
+  SetTarget
 } from "../../utils/rallyModel";
 
 /* ═══════════════════════════════════════════
@@ -593,6 +596,14 @@ export default function LiveMatchCenter() {
     serveTo?: CourtZone;
   } | null>(null);
 
+  // Attack Detail State (Modo Completo)
+  const [pendingAttackDetail, setPendingAttackDetail] = useState<{
+    action: RallyAction;
+    attackZone: AttackZone;
+    attackType: AttackType;
+    blockers: 0 | 1 | 2 | 3;
+  } | null>(null);
+
   // --- HYDRATION ---
   useEffect(() => {
     const saved = localStorage.getItem("volleyLab_liveMatch");
@@ -744,6 +755,19 @@ export default function LiveMatchCenter() {
       return;
     }
 
+    if (captureMode === 'completo' && (targetGesture === 'ataque' || targetGesture === 'dejada')) {
+      const lastArmado = [...currentRallyActions].reverse().find(a => a.team === 'our' && a.gesture === 'armado');
+      const defaultAttackZone: AttackZone = (lastArmado?.detail?.setTarget as AttackZone) || 4;
+      const defaultType: AttackType = defaultAttackZone === 6 ? 'pipe' : (targetGesture === 'dejada' ? 'media' : 'alta');
+      setPendingAttackDetail({
+        action,
+        attackZone: defaultAttackZone,
+        attackType: defaultType,
+        blockers: 2
+      });
+      return;
+    }
+
     executeRallyAction(action);
   };
 
@@ -789,6 +813,24 @@ export default function LiveMatchCenter() {
         }
       : action;
     setPendingServeDetail(null);
+    executeRallyAction(finalAction);
+  };
+
+  const confirmAttackDetail = (withDetail: boolean) => {
+    if (!pendingAttackDetail) return;
+    const { action, attackZone, attackType, blockers } = pendingAttackDetail;
+    const finalAction: RallyAction = withDetail
+      ? {
+          ...action,
+          detail: {
+            ...(action.detail || {}),
+            attackZone,
+            attackType,
+            blockers
+          }
+        }
+      : action;
+    setPendingAttackDetail(null);
     executeRallyAction(finalAction);
   };
 
@@ -1610,6 +1652,155 @@ export default function LiveMatchCenter() {
                 }}
               >
                 Confirmar Saque
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ATTACK DETAIL MODAL (MODO COMPLETO) ── */}
+      {pendingAttackDetail && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', padding: 16 }}>
+          <div style={{ width: 330, maxHeight: '90vh', overflowY: 'auto', background: '#111116', border: `1px solid ${C.bd}`, borderRadius: 16, padding: 20 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div>
+                <h3 style={{ color: C.w, fontSize: 16, fontWeight: 700, margin: 0 }}>
+                  Detalle de {pendingAttackDetail.action.gesture === 'dejada' ? 'Dejada' : 'Ataque'}
+                </h3>
+                <span style={{ fontSize: 11, color: C.t2 }}>
+                  {getPlayerName(pendingAttackDetail.action.playerId || '')} · Calidad {pendingAttackDetail.action.quality}
+                </span>
+              </div>
+              <button
+                onClick={() => confirmAttackDetail(false)}
+                style={{ background: 'none', border: 'none', color: C.t2, cursor: 'pointer', padding: 4 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* 1. Zona de Ataque (4, 3, 2, Zaga 1, Pipe 6, Zaga 5) */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: C.t2, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                Zona de Ataque
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                {[
+                  { z: 4 as AttackZone, lbl: 'Zona 4' },
+                  { z: 3 as AttackZone, lbl: 'Zona 3' },
+                  { z: 2 as AttackZone, lbl: 'Zona 2' },
+                  { z: 1 as AttackZone, lbl: 'Zaga 1' },
+                  { z: 6 as AttackZone, lbl: 'Pipe 6' },
+                  { z: 5 as AttackZone, lbl: 'Zaga 5' },
+                ].map(item => {
+                  const sel = pendingAttackDetail.attackZone === item.z;
+                  return (
+                    <button
+                      key={item.z}
+                      type="button"
+                      onClick={() => setPendingAttackDetail(prev => prev ? ({ ...prev, attackZone: item.z }) : null)}
+                      style={{
+                        minHeight: 44, padding: "8px 4px", borderRadius: 8,
+                        border: `1px solid ${sel ? C.vt : C.bd}`,
+                        background: sel ? C.vtBg : 'rgba(255,255,255,0.02)',
+                        color: sel ? C.vtLt : C.t2,
+                        fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                      }}
+                    >
+                      {item.lbl}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. Tipo de Pelota (Alta, Rápida, Media, Pipe, Segunda) */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: C.t2, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                Tipo de Pelota
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                {[
+                  { t: 'alta' as AttackType, lbl: 'Alta' },
+                  { t: 'rapida' as AttackType, lbl: 'Rápida' },
+                  { t: 'media' as AttackType, lbl: 'Media' },
+                  { t: 'pipe' as AttackType, lbl: 'Pipe' },
+                  { t: 'segunda' as AttackType, lbl: 'Segunda' },
+                ].map(item => {
+                  const sel = pendingAttackDetail.attackType === item.t;
+                  return (
+                    <button
+                      key={item.t}
+                      type="button"
+                      onClick={() => setPendingAttackDetail(prev => prev ? ({ ...prev, attackType: item.t }) : null)}
+                      style={{
+                        minHeight: 44, padding: "8px 4px", borderRadius: 8,
+                        border: `1px solid ${sel ? C.vt : C.bd}`,
+                        background: sel ? C.vtBg : 'rgba(255,255,255,0.02)',
+                        color: sel ? C.vtLt : C.t2,
+                        fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                      }}
+                    >
+                      {item.lbl}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 3. Bloqueadores Enfrente (0, 1, 2, 3) */}
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 11, color: C.t2, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                Bloqueadores Enfrente
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {([0, 1, 2, 3] as (0 | 1 | 2 | 3)[]).map(bl => {
+                  const sel = pendingAttackDetail.blockers === bl;
+                  return (
+                    <button
+                      key={bl}
+                      type="button"
+                      onClick={() => setPendingAttackDetail(prev => prev ? ({ ...prev, blockers: bl }) : null)}
+                      style={{
+                        minHeight: 44, borderRadius: 8,
+                        border: `1px solid ${sel ? C.vt : C.bd}`,
+                        background: sel ? C.vtBg : 'rgba(255,255,255,0.02)',
+                        color: sel ? C.vtLt : C.t2,
+                        fontFamily: "'DM Mono', monospace",
+                        fontSize: 14, fontWeight: 700, cursor: 'pointer'
+                      }}
+                    >
+                      {bl === 0 ? 'Sin bloq.' : `${bl} bloq.`}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => confirmAttackDetail(false)}
+                style={{
+                  minHeight: 44, padding: "10px 8px", borderRadius: 10,
+                  border: `1px solid ${C.bdMed}`, background: 'rgba(255,255,255,0.05)',
+                  color: C.t1, fontSize: 13, fontWeight: 500, cursor: 'pointer'
+                }}
+              >
+                Saltar Detalle
+              </button>
+              <button
+                type="button"
+                onClick={() => confirmAttackDetail(true)}
+                style={{
+                  minHeight: 44, padding: "10px 8px", borderRadius: 10,
+                  border: `1px solid ${C.vt}`, background: C.vtBg,
+                  color: C.vtLt, fontSize: 13, fontWeight: 600, cursor: 'pointer'
+                }}
+              >
+                Confirmar
               </button>
             </div>
           </div>
