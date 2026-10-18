@@ -451,8 +451,10 @@ export function MatchAnalytics() {
                 <span className="text-[10px] tracking-wider px-2 py-0.5 rounded border uppercase"
                   style={dynStats.match.result === 'W'
                     ? { color: '#A191FF', borderColor: '#A191FF', backgroundColor: 'rgba(161,145,255,0.08)' }
+                    : dynStats.match.result === 'D'
+                    ? { color: '#FFD391', borderColor: '#FFD391', backgroundColor: 'rgba(255,211,145,0.08)' }
                     : { color: '#FF919F', borderColor: '#FF919F', backgroundColor: 'rgba(255,145,159,0.08)' }}>
-                  {dynStats.match.result === 'W' ? 'Victoria' : 'Derrota'}
+                  {dynStats.match.result === 'W' ? 'Victoria' : dynStats.match.result === 'D' ? 'Empate' : 'Derrota'}
                 </span>
               </div>
             </div>
