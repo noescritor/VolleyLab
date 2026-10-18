@@ -456,6 +456,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const teams = await supabaseService.getTeams();
       if (teams.length === 0) throw new Error('Crea un equipo primero antes de actualizar un partido');
       
+      const existingMatch = state.matches.find(m => m.id === matchId);
+      const existingRallies = (matchData as any).rallies !== undefined ? (matchData as any).rallies : (existingMatch?.rallies || []);
+      const existingTimeline = (matchData as any).timeline !== undefined ? (matchData as any).timeline : (existingMatch?.timeline || []);
+
       const supabaseMatch = await supabaseService.updateMatch(matchId, {
         team_id: teams[0].id,
         opponent_name: matchData.opponent,
@@ -463,9 +467,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         competition_type: matchData.matchType,
         location: matchData.venue,
         match_metadata: {
-          notes: matchData.notes,
-          result: matchData.result,
-          score: matchData.score
+          notes: matchData.notes !== undefined ? matchData.notes : existingMatch?.notes,
+          result: matchData.result !== undefined ? matchData.result : existingMatch?.result,
+          score: matchData.score !== undefined ? matchData.score : existingMatch?.score,
+          rallies: existingRallies,
+          timeline: existingTimeline
         }
       });
       
