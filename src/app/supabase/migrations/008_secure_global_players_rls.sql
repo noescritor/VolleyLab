@@ -39,3 +39,8 @@ $$;
 
 REVOKE ALL ON FUNCTION public.find_player_by_athlete_id(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.find_player_by_athlete_id(text) TO authenticated;
+
+-- 4. Eliminar políticas legacy abiertas en global_players
+DROP POLICY IF EXISTS "Anyone can read global players" ON public.global_players;
+DROP POLICY IF EXISTS "Coaches pueden registrar Ghost Profiles" ON public.global_players;
+
