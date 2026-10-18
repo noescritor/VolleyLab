@@ -258,6 +258,9 @@ function AppContent() {
     setIsSigningOut(true);
     try {
       await supabase.auth.signOut();
+      localStorage.removeItem('currentOrgId');
+      localStorage.removeItem('volleyLab_liveMatch');
+      localStorage.removeItem('volleyball-offline-queue');
       window.location.href = '/auth';
     } catch {
       toast.error('Error al cerrar sesión');

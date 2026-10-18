@@ -15,11 +15,26 @@ class SupabaseService {
   }
 
   async getUserOrg(): Promise<UUID | null> {
-    const storedOrgId = typeof window !== 'undefined' ? localStorage.getItem('currentOrgId') : null;
-    if (storedOrgId) return storedOrgId;
-
     const user = await this.getCurrentUser();
     if (!user) return null;
+
+    const storedOrgId = typeof window !== 'undefined' ? localStorage.getItem('currentOrgId') : null;
+    if (storedOrgId) {
+      const { data: validMember } = await this.supabase
+        .from('org_members')
+        .select('org_id')
+        .eq('user_id', user.id)
+        .eq('org_id', storedOrgId)
+        .eq('activo', true)
+        .maybeSingle();
+
+      if (validMember?.org_id) {
+        return validMember.org_id;
+      }
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('currentOrgId');
+      }
+    }
 
     const { data } = await this.supabase
       .from('org_members')
@@ -157,14 +172,12 @@ class SupabaseService {
     const orgId = await this.getUserOrg();
     if (!orgId) throw new Error('No org context');
 
-    // Find the player in global_players
-    const { data: player, error: playerError } = await this.supabase
-      .from('global_players')
-      .select('id')
-      .eq('global_athlete_id', athleteId)
-      .single();
+    // Find the player via SECURITY DEFINER RPC (returns only id + name)
+    const { data: players, error: playerError } = await this.supabase
+      .rpc('find_player_by_athlete_id', { target_athlete_id: athleteId });
 
-    if (playerError || !player) throw new Error('Jugador no encontrado con ese ID');
+    const player = Array.isArray(players) ? players[0] : players;
+    if (playerError || !player?.id) throw new Error('Jugador no encontrado con ese ID');
 
     const { data, error } = await this.supabase
       .from('club_roster')

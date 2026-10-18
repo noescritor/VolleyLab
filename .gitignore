@@ -22,6 +22,7 @@ e2e_test.ts
 test_auth.ts
 test_db.ts
 test_rls.ts
+test_trigger_simulation.ts
 
 # Logs
 *.log
