@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { Plus, AlertTriangle, TrendingUp, Activity, Heart, Moon } from 'lucide-react';
+import { toast } from 'sonner@2.0.3';
 import { useApp } from '../utils/AppContext';
 
 const INPUT_CLS = 'w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2.5 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#A191FF]/50 transition-colors';
 const LABEL_CLS = 'block text-[11px] font-mono uppercase tracking-wide text-white/40 mb-1';
 
 const CHART_TOOLTIP = {
-  contentStyle: { background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6 },
-  labelStyle:   { color: 'rgba(255,255,255,0.4)', fontSize: 11 },
-  itemStyle:    { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
+  contentStyle: { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 6 },
+  labelStyle:   { color: 'var(--muted-foreground)', fontSize: 11 },
+  itemStyle:    { color: 'var(--foreground)', fontSize: 12 },
 };
 
 const wellnessLabels: Record<string, string> = {
@@ -19,38 +20,43 @@ const wellnessLabels: Record<string, string> = {
   shoulderPain: 'Dolor Hombro', kneePain: 'Dolor Rodilla', anklePain: 'Dolor Tobillo'
 };
 
-const generateMockLoadData = (players) => {
-  if (!players?.length) return [];
-  const dates = ['2025-01-15','2025-01-14','2025-01-13','2025-01-12','2025-01-11'];
-  const data: any[] = [];
-  players.slice(0, 3).forEach(player => {
-    dates.forEach(date => {
-      const minutes = 70 + Math.floor(Math.random() * 30);
-      const RPE     = 6  + Math.floor(Math.random() * 3);
-      data.push({
-        playerId: player.id, playerName: player.name, date,
-        minutes, RPE, sRPE: minutes * RPE,
-        jumps: 80 + Math.floor(Math.random() * 80),
-        wellness: {
-          sleep: 2 + Math.floor(Math.random() * 3), stress: 1 + Math.floor(Math.random() * 3),
-          fatigue: 2 + Math.floor(Math.random() * 3), DOMS: 1 + Math.floor(Math.random() * 3),
-          shoulderPain: Math.floor(Math.random() * 3), kneePain: Math.floor(Math.random() * 2),
-          anklePain: Math.floor(Math.random() * 2),
-        }
-      });
-    });
-  });
-  return data;
+const LOAD_STORAGE_KEY = 'volleyLab_loadEntries';
+
+interface LoadEntry {
+  playerId: string;
+  playerName: string;
+  date: string;
+  minutes: number;
+  RPE: number;
+  sRPE: number;
+  jumps: number;
+  wellness: {
+    sleep: number;
+    stress: number;
+    fatigue: number;
+    DOMS: number;
+    shoulderPain: number;
+    kneePain: number;
+    anklePain: number;
+  };
+}
+
+const getLocalDateString = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 };
 
-const calculateACWR = (data) => {
+const calculateACWR = (data: LoadEntry[]) => {
   if (data.length < 7) return null;
   const w7  = data.slice(-7).reduce((s, d) => s + d.sRPE, 0);
   const w28 = data.slice(-28).reduce((s, d) => s + d.sRPE, 0) / 4;
   return w28 > 0 ? (w7 / w28).toFixed(2) : '0';
 };
 
-const getACWRStatus = (acwr) => {
+const getACWRStatus = (acwr: string | null) => {
   if (!acwr) return { text: 'N/A', color: '#91CAFF', bg: 'rgba(145,202,255,0.08)' };
   const v = parseFloat(acwr);
   if (v < 0.8)  return { text: 'BAJO RIESGO',      color: '#FFD391', bg: 'rgba(255,211,145,0.08)' };
@@ -65,6 +71,33 @@ export function LoadManagement() {
   const [selectedPlayer, setSelectedPlayer] = useState('');
   const [isDialogOpen, setIsDialogOpen]     = useState(false);
   const [viewMode, setViewMode]             = useState('individual');
+  const [allLoad, setAllLoad]               = useState<LoadEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOAD_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (!selectedPlayer && players?.length > 0) {
+      setSelectedPlayer(players[0].id);
+    }
+  }, [players, selectedPlayer]);
+
+  const handleSaveEntry = (entry: LoadEntry) => {
+    setAllLoad(prev => {
+      const next = [...prev, entry].sort((a, b) => a.date.localeCompare(b.date));
+      try {
+        localStorage.setItem(LOAD_STORAGE_KEY, JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+    toast.success('Carga registrada correctamente');
+  };
 
   if (loading?.players) {
     return (
@@ -81,9 +114,6 @@ export function LoadManagement() {
     );
   }
 
-  if (!selectedPlayer && players.length > 0) setSelectedPlayer(players[0].id);
-
-  const allLoad    = generateMockLoadData(players);
   const playerLoad = allLoad.filter(d => d.playerId === selectedPlayer).slice(-14);
   const chartData  = playerLoad.map(d => ({
     date:     d.date.split('-')[2] + '/' + d.date.split('-')[1],
@@ -106,17 +136,34 @@ export function LoadManagement() {
 
   // ── Load Form ─────────────────────────────────────────────────────────────
   function LoadForm() {
-    const [formData, setFormData] = useState({
-      playerId: selectedPlayer, date: new Date().toISOString().split('T')[0],
+    const [formData, setFormData] = useState<any>({
+      playerId: selectedPlayer, date: getLocalDateString(),
       minutes: '', RPE: '', jumps: '',
       wellness: { sleep: 3, stress: 2, fatigue: 2, DOMS: 1, shoulderPain: 0, kneePain: 0, anklePain: 0 }
     });
 
-    const setW = (k, v) => setFormData(p => ({ ...p, wellness: { ...p.wellness, [k]: parseInt(v) } }));
+    const setW = (k: string, v: string) => setFormData((p: any) => ({ ...p, wellness: { ...p.wellness, [k]: parseInt(v) } }));
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      console.log('Load saved:', { ...formData, sRPE: parseInt(formData.minutes) * parseInt(formData.RPE) });
+      const minutes = parseInt(formData.minutes) || 0;
+      const RPE = parseInt(formData.RPE) || 0;
+      const jumps = parseInt(formData.jumps) || 0;
+      if (minutes <= 0 || RPE <= 0) {
+        toast.error('Ingresa minutos y RPE válidos');
+        return;
+      }
+      const pl = players.find(p => p.id === formData.playerId);
+      handleSaveEntry({
+        playerId: formData.playerId,
+        playerName: pl?.name || '',
+        date: formData.date,
+        minutes,
+        RPE,
+        sRPE: minutes * RPE,
+        jumps,
+        wellness: formData.wellness,
+      });
       setIsDialogOpen(false);
     };
 
@@ -125,7 +172,7 @@ export function LoadManagement() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={LABEL_CLS}>Jugadora</label>
-            <Select value={formData.playerId} onValueChange={v => setFormData(p => ({ ...p, playerId: v }))}>
+            <Select value={formData.playerId} onValueChange={v => setFormData((p: any) => ({ ...p, playerId: v }))}>
               <SelectTrigger className="bg-white/[0.04] border-white/[0.08] text-[13px] text-white">
                 <SelectValue />
               </SelectTrigger>
@@ -141,7 +188,7 @@ export function LoadManagement() {
           <div>
             <label className={LABEL_CLS}>Fecha</label>
             <input type="date" value={formData.date}
-              onChange={e => setFormData(p => ({ ...p, date: e.target.value }))}
+              onChange={e => setFormData((p: any) => ({ ...p, date: e.target.value }))}
               className={INPUT_CLS} />
           </div>
         </div>
@@ -151,7 +198,7 @@ export function LoadManagement() {
             <div key={k}>
               <label className={LABEL_CLS}>{l}</label>
               <input type="number" value={formData[k]} placeholder={ph}
-                onChange={e => setFormData(p => ({ ...p, [k]: e.target.value }))}
+                onChange={e => setFormData((p: any) => ({ ...p, [k]: e.target.value }))}
                 className={INPUT_CLS} />
             </div>
           ))}
@@ -256,8 +303,10 @@ export function LoadManagement() {
       {viewMode === 'individual' && currentPlayer && (
         <>
           {playerLoad.length === 0 ? (
-            <div className="py-10 text-center text-[13px] text-white/30 border border-dashed border-white/[0.08] rounded-lg">
-              Sin datos de carga para {currentPlayer.name}. Usa "Registrar Carga".
+            <div className="py-12 text-center border border-dashed border-white/[0.08] rounded-lg">
+              <Activity size={28} className="text-white/20 mx-auto mb-3" />
+              <p className="text-[13px] text-white/40 mb-1">No hay datos de carga registrados para {currentPlayer.name}</p>
+              <p className="text-[12px] text-white/25">Usa el botón "Registrar Carga" para agregar sesiones de entrenamiento y bienestar.</p>
             </div>
           ) : (
             <>
@@ -270,7 +319,7 @@ export function LoadManagement() {
                     style={{ color: acwrStatus.color, backgroundColor: acwrStatus.bg }}>
                     {acwrStatus.text}
                   </span>
-                  {parseFloat(acwr) > 1.5 && (
+                  {acwr && parseFloat(acwr) > 1.5 && (
                     <div className="flex items-center gap-1.5 mt-2">
                       <AlertTriangle size={12} style={{ color: '#FF919F' }} />
                       <p className="text-[11px]" style={{ color: '#FF919F' }}>Riesgo elevado</p>
@@ -284,7 +333,7 @@ export function LoadManagement() {
                   <div className="mt-2 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: '75%', backgroundColor: '#A191FF' }} />
                   </div>
-                  <p className="text-[11px] text-white/30 mt-1">75% carga objetivo</p>
+                  <p className="text-[11px] text-white/30 mt-1">Últimos 7 registros</p>
                 </div>
 
                 <div className="px-5 py-4 bg-white/[0.02] border border-white/[0.06] rounded-lg">

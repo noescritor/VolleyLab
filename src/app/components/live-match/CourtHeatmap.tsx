@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-// Design tokens
+// Design tokens (Moodboard Kit 3.0)
 const C = {
-  bg: '#070709',
-  surface: '#11141a',
-  courtBg: '#1a2235',
-  courtLine: '#2e4a72',
+  bg: '#000000',
+  surface: '#0d0d0d',
+  courtBg: '#0d0d0d',
+  courtLine: 'rgba(255, 255, 255, 0.25)',
   accent: '#A191FF',
-  accent2: '#ff6b35',
-  text: '#e8eaf0',
-  muted: '#5a6070',
+  accent2: '#FF919F',
+  text: '#FFFFFF',
+  muted: 'rgba(255, 255, 255, 0.40)',
 };
 
 export interface Impact {
@@ -249,14 +249,14 @@ export function CourtHeatmap({
         {mode === 'capture' && (
           <div style={{ position: 'absolute', inset: 0, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: `repeat(${viewHalf === 'full' ? 6 : 3}, 1fr)`, zIndex: 3, pointerEvents: 'none' }}>
             {Array.from({ length: viewHalf === 'full' ? 18 : 9 }).map((_, i) => (
-              <div key={i} style={{ border: `1px solid rgba(46, 74, 114, 0.2)` }} />
+              <div key={i} style={{ border: `1px solid rgba(255, 255, 255, 0.08)` }} />
             ))}
           </div>
         )}
 
         {/* Attack Lines */}
-        { (viewHalf === 'full' || viewHalf === 'top') && <div style={{ position: 'absolute', left: 0, right: 0, top: viewHalf === 'top' ? '66.6%' : '33.3%', height: 1, background: 'rgba(0, 229, 255, 0.25)', zIndex: 4 }} /> }
-        { (viewHalf === 'full' || viewHalf === 'bottom') && <div style={{ position: 'absolute', left: 0, right: 0, top: viewHalf === 'bottom' ? '33.3%' : '66.6%', height: 1, background: 'rgba(0, 229, 255, 0.25)', zIndex: 4 }} /> }
+        { (viewHalf === 'full' || viewHalf === 'top') && <div style={{ position: 'absolute', left: 0, right: 0, top: viewHalf === 'top' ? '66.6%' : '33.3%', height: 1, background: 'rgba(145, 202, 255, 0.25)', zIndex: 4 }} /> }
+        { (viewHalf === 'full' || viewHalf === 'bottom') && <div style={{ position: 'absolute', left: 0, right: 0, top: viewHalf === 'bottom' ? '33.3%' : '66.6%', height: 1, background: 'rgba(145, 202, 255, 0.25)', zIndex: 4 }} /> }
 
         {/* Net & Center Line */}
         {viewHalf === 'full' && (
@@ -291,7 +291,7 @@ export function CourtHeatmap({
             position: 'absolute',
             left: r.x, top: r.y,
             width: 24, height: 24,
-            background: 'rgba(255, 107, 53, 0.7)',
+            background: 'rgba(255, 145, 159, 0.7)',
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             pointerEvents: 'none',

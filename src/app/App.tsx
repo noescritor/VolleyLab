@@ -245,6 +245,8 @@ function AppContent() {
 
   useEffect(() => {
     const root = window.document.documentElement;
+    root.setAttribute('data-theme', theme);
+    root.style.colorScheme = theme;
     if (theme === 'dark') {
       root.classList.add('dark');
     } else {

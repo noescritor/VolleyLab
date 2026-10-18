@@ -1,11 +1,14 @@
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *, [data-theme="dark"] *));
 
 /* =====================================================
-   VOLLEYLAB DESIGN SYSTEM — Dark Native
-   Base: Moodboard Kit 3.0 + Volleyball position layer
+   VOLLEYLAB DESIGN SYSTEM — Moodboard Kit 3.0
+   Tokens: --bg-*, --text-*, data-theme & color-scheme
    ===================================================== */
 
-:root {
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
   /* --- Typography --- */
   --font-size: 14px;
   --font-sans: 'DM Sans', system-ui, sans-serif;
@@ -14,53 +17,65 @@
   --font-weight-medium: 500;
   --font-weight-bold: 700;
 
+  /* --- Moodboard Kit 3.0 Light Tokens --- */
+  --bg-primary:   #FFFFFF;
+  --bg-surface:   #F9FAFB;
+  --bg-elevated:  #F3F4F6;
+  --bg-subtle:    rgba(0, 0, 0, 0.04);
+
+  --text-primary:     rgba(0, 0, 0, 0.95);
+  --text-secondary:   rgba(0, 0, 0, 0.65);
+  --text-tertiary:    rgba(0, 0, 0, 0.45);
+  --text-muted:       rgba(0, 0, 0, 0.30);
+  --text-placeholder: rgba(0, 0, 0, 0.25);
+
   /* --- Backgrounds --- */
-  --background:  #FFFFFF;
-  --card:        #F9FAFB;
+  --background:  var(--bg-primary);
+  --card:        var(--bg-surface);
   --popover:     #FFFFFF;
-  --elevated:    #F3F4F6;
+  --elevated:    var(--bg-elevated);
 
   /* --- Foregrounds --- */
-  --foreground:            rgba(0, 0, 0, 1.00);
-  --card-foreground:       rgba(0, 0, 0, 1.00);
-  --popover-foreground:    rgba(0, 0, 0, 1.00);
-  --foreground-secondary:  rgba(0, 0, 0, 0.60);
-  --foreground-tertiary:   rgba(0, 0, 0, 0.40);
-  --foreground-muted:      rgba(0, 0, 0, 0.25);
-  --foreground-placeholder:rgba(0, 0, 0, 0.20);
+  --foreground:            var(--text-primary);
+  --card-foreground:       var(--text-primary);
+  --popover-foreground:    var(--text-primary);
+  --foreground-secondary:  var(--text-secondary);
+  --foreground-tertiary:   var(--text-tertiary);
+  --foreground-muted:      var(--text-muted);
+  --foreground-placeholder:var(--text-placeholder);
   --foreground-subtle:     rgba(0, 0, 0, 0.15);
 
-  /* --- Accent palette (slightly adjusted for light mode contrast) --- */
+  /* --- Official Moodboard Kit 3.0 Accents --- */
   --primary:          #A191FF;
-  --primary-foreground: #FFFFFF;
-  --accent-blue:      #60A5FA;
-  --accent-green:     #34D399;
-  --accent-yellow:    #FBBF24;
-  --accent-red:       #F87171;
-  --accent-purple:    #C084FC;
+  --primary-foreground: #000000;
+  --accent-blue:      #91CAFF;
+  --accent-green:     #91FFB0;
+  --accent-yellow:    #FFD391;
+  --accent-red:       #FF919F;
+  --accent-purple:    #DC91FF;
 
   /* --- Semantic states --- */
-  --success:              #34D399;
-  --success-foreground:   #FFFFFF;
-  --success-bg:           rgba(52, 211, 153, 0.15);
-  --warning:              #FBBF24;
-  --warning-foreground:   #FFFFFF;
-  --warning-bg:           rgba(251, 191, 36, 0.15);
-  --destructive:          #F87171;
-  --destructive-foreground: #FFFFFF;
-  --destructive-bg:       rgba(248, 113, 113, 0.15);
+  --success:              #91FFB0;
+  --success-foreground:   #000000;
+  --success-bg:           rgba(145, 255, 176, 0.15);
+  --warning:              #FFD391;
+  --warning-foreground:   #000000;
+  --warning-bg:           rgba(255, 211, 145, 0.15);
+  --destructive:          #FF919F;
+  --destructive-foreground: #000000;
+  --destructive-bg:       rgba(255, 145, 159, 0.15);
 
   /* --- Shadcn/ui semantic aliases --- */
   --secondary:            rgba(0, 0, 0, 0.05);
-  --secondary-foreground: rgba(0, 0, 0, 0.60);
+  --secondary-foreground: var(--text-secondary);
   --muted:                rgba(0, 0, 0, 0.04);
-  --muted-foreground:     rgba(0, 0, 0, 0.40);
+  --muted-foreground:     var(--text-tertiary);
   --accent:               rgba(0, 0, 0, 0.04);
-  --accent-foreground:    rgba(0, 0, 0, 1.00);
+  --accent-foreground:    var(--text-primary);
 
   /* --- Borders --- */
   --border:       rgba(0, 0, 0, 0.08);
-  --border-soft:  rgba(0, 0, 0, 0.04);
+  --border-soft:  rgba(0, 0, 0, 0.05);
   --border-hover: rgba(0, 0, 0, 0.20);
 
   /* --- Interactive states --- */
@@ -74,37 +89,37 @@
   --ring:             rgba(161, 145, 255, 0.50);
 
   /* --- Border radius --- */
-  --radius: 0.5rem; /* 8px — panel/modal/card */
+  --radius: 0.5rem;
 
-  /* --- Volleyball position colors --- */
-  --pos-punta:        #8B5CF6;
-  --pos-punta-bg:     rgba(139, 92, 246, 0.1);
-  --pos-opuesto:      #3B82F6;
-  --pos-opuesto-bg:   rgba(59, 130, 246, 0.1);
-  --pos-central:      #10B981;
-  --pos-central-bg:   rgba(16, 185, 129, 0.1);
-  --pos-colocador:    #F59E0B;
-  --pos-colocador-bg: rgba(245, 158, 11, 0.1);
-  --pos-libero:       #EF4444;
-  --pos-libero-bg:    rgba(239, 68, 68, 0.1);
-  --pos-segundo:      #D946EF;
-  --pos-segundo-bg:   rgba(217, 70, 239, 0.1);
+  /* --- Volleyball position colors (Moodboard Kit 3.0) --- */
+  --pos-punta:        #A191FF;
+  --pos-punta-bg:     rgba(161, 145, 255, 0.12);
+  --pos-opuesto:      #91CAFF;
+  --pos-opuesto-bg:   rgba(145, 202, 255, 0.12);
+  --pos-central:      #91FFB0;
+  --pos-central-bg:   rgba(145, 255, 176, 0.12);
+  --pos-colocador:    #FFD391;
+  --pos-colocador-bg: rgba(255, 211, 145, 0.12);
+  --pos-libero:       #FF919F;
+  --pos-libero-bg:    rgba(255, 145, 159, 0.12);
+  --pos-segundo:      #DC91FF;
+  --pos-segundo-bg:   rgba(220, 145, 255, 0.12);
 
   /* --- Chart colors --- */
-  --chart-1: #8B5CF6;
-  --chart-2: #3B82F6;
-  --chart-3: #10B981;
-  --chart-4: #F59E0B;
-  --chart-5: #EF4444;
-  --chart-6: #D946EF;
+  --chart-1: #A191FF;
+  --chart-2: #91CAFF;
+  --chart-3: #91FFB0;
+  --chart-4: #FFD391;
+  --chart-5: #FF919F;
+  --chart-6: #DC91FF;
 
   /* --- Sidebar --- */
   --sidebar:                    #FFFFFF;
-  --sidebar-foreground:         rgba(0, 0, 0, 1.00);
+  --sidebar-foreground:         var(--text-primary);
   --sidebar-primary:            #A191FF;
-  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-primary-foreground: #000000;
   --sidebar-accent:             rgba(0, 0, 0, 0.04);
-  --sidebar-accent-foreground:  rgba(0, 0, 0, 0.60);
+  --sidebar-accent-foreground:  var(--text-secondary);
   --sidebar-border:             rgba(0, 0, 0, 0.08);
   --sidebar-ring:               rgba(161, 145, 255, 0.50);
 
@@ -116,27 +131,44 @@
   --neutral-900: rgba(0, 0, 0, 1.00);
 }
 
-/* Dark class mirrors root — dark is always on in VolleyLab */
-.dark {
-  --background:         #000000;
-  --card:               #0d0d0d;
-  --popover:            #0d0d0d;
-  --foreground:         rgba(255, 255, 255, 1.00);
-  --card-foreground:    rgba(255, 255, 255, 1.00);
-  --popover-foreground: rgba(255, 255, 255, 1.00);
+/* Dark theme via data-theme="dark" or .dark */
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-primary:   #000000;
+  --bg-surface:   #0d0d0d;
+  --bg-elevated:  #141414;
+  --bg-subtle:    rgba(255, 255, 255, 0.04);
+
+  --text-primary:     rgba(255, 255, 255, 1.00);
+  --text-secondary:   rgba(255, 255, 255, 0.60);
+  --text-tertiary:    rgba(255, 255, 255, 0.40);
+  --text-muted:       rgba(255, 255, 255, 0.25);
+  --text-placeholder: rgba(255, 255, 255, 0.20);
+
+  --background:         var(--bg-primary);
+  --card:               var(--bg-surface);
+  --popover:            var(--bg-surface);
+  --elevated:           var(--bg-elevated);
+  --foreground:         var(--text-primary);
+  --card-foreground:    var(--text-primary);
+  --popover-foreground: var(--text-primary);
   --primary:            #A191FF;
   --primary-foreground: #000000;
   --secondary:          rgba(255, 255, 255, 0.08);
-  --secondary-foreground: rgba(255, 255, 255, 0.60);
+  --secondary-foreground: var(--text-secondary);
   --muted:              rgba(255, 255, 255, 0.04);
-  --muted-foreground:   rgba(255, 255, 255, 0.40);
+  --muted-foreground:   var(--text-tertiary);
   --accent:             rgba(255, 255, 255, 0.04);
-  --accent-foreground:  rgba(255, 255, 255, 1.00);
+  --accent-foreground:  var(--text-primary);
   --destructive:        #FF919F;
   --destructive-foreground: #000000;
   --success:            #91FFB0;
   --warning:            #FFD391;
   --border:             rgba(255, 255, 255, 0.08);
+  --border-soft:        rgba(255, 255, 255, 0.05);
+  --border-hover:       rgba(255, 255, 255, 0.20);
   --input:              rgba(255, 255, 255, 0.04);
   --input-background:   rgba(255, 255, 255, 0.04);
   --ring:               rgba(161, 145, 255, 0.50);
@@ -147,11 +179,11 @@
   --chart-5: #FF919F;
   --chart-6: #DC91FF;
   --sidebar:                    #0d0d0d;
-  --sidebar-foreground:         rgba(255, 255, 255, 1.00);
+  --sidebar-foreground:         var(--text-primary);
   --sidebar-primary:            #A191FF;
   --sidebar-primary-foreground: #000000;
   --sidebar-accent:             rgba(255, 255, 255, 0.04);
-  --sidebar-accent-foreground:  rgba(255, 255, 255, 0.60);
+  --sidebar-accent-foreground:  var(--text-secondary);
   --sidebar-border:             rgba(255, 255, 255, 0.08);
   --sidebar-ring:               rgba(161, 145, 255, 0.50);
 }
@@ -258,3 +290,58 @@
   .bg-accent-red    { background-color: rgba(255, 145, 159, 0.08); }
   .bg-accent-purple { background-color: rgba(220, 145, 255, 0.08); }
 }
+
+/* Light theme surface & text mappings via data-theme="light" (without filter: invert) */
+[data-theme="light"] .bg-\[\#080808\],
+[data-theme="light"] .bg-\[\#0a0a0a\],
+[data-theme="light"] .bg-black {
+  background-color: var(--bg-primary) !important;
+}
+
+[data-theme="light"] .bg-\[\#0d0d0d\] {
+  background-color: var(--bg-surface) !important;
+}
+
+[data-theme="light"] .bg-\[\#141414\],
+[data-theme="light"] .bg-\[\#1a1a1a\] {
+  background-color: var(--bg-elevated) !important;
+}
+
+[data-theme="light"] .bg-white\/\[0\.02\],
+[data-theme="light"] .bg-white\/\[0\.03\],
+[data-theme="light"] .bg-white\/\[0\.04\],
+[data-theme="light"] .bg-white\/5 {
+  background-color: var(--bg-subtle) !important;
+}
+
+[data-theme="light"] .text-white {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .text-white\/80,
+[data-theme="light"] .text-white\/70,
+[data-theme="light"] .text-white\/60 {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .text-white\/50,
+[data-theme="light"] .text-white\/45,
+[data-theme="light"] .text-white\/40,
+[data-theme="light"] .text-white\/35 {
+  color: var(--text-tertiary) !important;
+}
+
+[data-theme="light"] .text-white\/30,
+[data-theme="light"] .text-white\/25,
+[data-theme="light"] .text-white\/20 {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="light"] .border-white\/\[0\.05\],
+[data-theme="light"] .border-white\/\[0\.06\],
+[data-theme="light"] .border-white\/\[0\.08\],
+[data-theme="light"] .border-white\/10,
+[data-theme="light"] .border-white\/5 {
+  border-color: var(--border) !important;
+}
+

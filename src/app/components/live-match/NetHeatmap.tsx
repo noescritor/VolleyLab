@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-// Design tokens
+// Design tokens (Moodboard Kit 3.0)
 const C = {
-  bg: '#070709',
-  surface: '#11141a',
-  netBg: '#1a2235',
-  netLine: '#2e4a72',
-  accent: '#A191FF', // Cyan for our team
-  accent2: '#ff6b35', // Orange for rival penetrations
-  text: '#e8eaf0',
-  muted: '#5a6070',
+  bg: '#000000',
+  surface: '#0d0d0d',
+  netBg: '#0d0d0d',
+  netLine: 'rgba(255, 255, 255, 0.25)',
+  accent: '#A191FF',
+  accent2: '#FF919F',
+  text: '#FFFFFF',
+  muted: 'rgba(255, 255, 255, 0.40)',
 };
 
 export interface Impact {
@@ -210,7 +210,7 @@ export function NetHeatmap({ impacts = [], mode = 'view', onCapture, width = 300
             position: 'absolute',
             left: r.x, top: r.y,
             width: 24, height: 24,
-            background: 'rgba(255, 107, 53, 0.7)',
+            background: 'rgba(255, 145, 159, 0.7)',
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             pointerEvents: 'none',

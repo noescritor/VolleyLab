@@ -180,24 +180,24 @@ export function TestPage() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="text-center">
-                <div className="w-full h-16 bg-blue-600 rounded-lg mb-2"></div>
-                <p className="text-xs text-gray-600">Primary #2563EB</p>
+                <div className="w-full h-16 bg-[#A191FF] rounded-lg mb-2"></div>
+                <p className="text-xs text-muted-foreground">Primary #A191FF</p>
               </div>
               <div className="text-center">
-                <div className="w-full h-16 bg-green-600 rounded-lg mb-2"></div>
-                <p className="text-xs text-gray-600">Success #16A34A</p>
+                <div className="w-full h-16 bg-[#91FFB0] rounded-lg mb-2"></div>
+                <p className="text-xs text-muted-foreground">Success #91FFB0</p>
               </div>
               <div className="text-center">
-                <div className="w-full h-16 bg-yellow-500 rounded-lg mb-2"></div>
-                <p className="text-xs text-gray-600">Warning #F59E0B</p>
+                <div className="w-full h-16 bg-[#FFD391] rounded-lg mb-2"></div>
+                <p className="text-xs text-muted-foreground">Warning #FFD391</p>
               </div>
               <div className="text-center">
-                <div className="w-full h-16 bg-red-600 rounded-lg mb-2"></div>
-                <p className="text-xs text-gray-600">Danger #DC2626</p>
+                <div className="w-full h-16 bg-[#FF919F] rounded-lg mb-2"></div>
+                <p className="text-xs text-muted-foreground">Danger #FF919F</p>
               </div>
               <div className="text-center">
-                <div className="w-full h-16 bg-gray-500 rounded-lg mb-2"></div>
-                <p className="text-xs text-gray-600">Neutral</p>
+                <div className="w-full h-16 bg-white/40 rounded-lg mb-2"></div>
+                <p className="text-xs text-muted-foreground">Neutral</p>
               </div>
             </div>
           </CardContent>

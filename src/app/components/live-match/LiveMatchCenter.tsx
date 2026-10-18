@@ -506,15 +506,6 @@ export default function LiveMatchCenter() {
   const { state, createMatch } = useApp();
   const { players } = state;
 
-  /* — Fonts & global styles — */
-  useEffect(() => {
-    const lk = document.createElement("link");
-    lk.rel = "stylesheet";
-    lk.href = "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap";
-    document.head.appendChild(lk);
-    return () => { document.head.removeChild(lk); };
-  }, []);
-
   /* — Match/Database State — */
   const [opponent, setOpponent] = useState("");
   const [matchType, setMatchType] = useState("Amistoso");

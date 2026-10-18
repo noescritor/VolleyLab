@@ -66,19 +66,19 @@ export function UIKit() {
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-16">
               <div className="space-y-8">
                 <div className="w-full h-16 bg-primary rounded-lg"></div>
-                <div className="caption text-neutral-700">Primary #2563EB</div>
+                <div className="caption text-neutral-700">Primary #A191FF</div>
               </div>
               <div className="space-y-8">
                 <div className="w-full h-16 bg-success rounded-lg"></div>
-                <div className="caption text-neutral-700">Success #16A34A</div>
+                <div className="caption text-neutral-700">Success #91FFB0</div>
               </div>
               <div className="space-y-8">
                 <div className="w-full h-16 bg-warning rounded-lg"></div>
-                <div className="caption text-neutral-700">Warning #F59E0B</div>
+                <div className="caption text-neutral-700">Warning #FFD391</div>
               </div>
               <div className="space-y-8">
                 <div className="w-full h-16 bg-destructive rounded-lg"></div>
-                <div className="caption text-neutral-700">Danger #DC2626</div>
+                <div className="caption text-neutral-700">Danger #FF919F</div>
               </div>
               <div className="space-y-8">
                 <div className="w-full h-16 bg-neutral-500 rounded-lg"></div>

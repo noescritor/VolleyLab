@@ -157,7 +157,7 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
           {/* Errores */}
           <div className="glass-card w-[349px] h-[140px] p-6 relative">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-[#FFAC91]" />
+              <div className="w-2 h-2 rounded-full bg-[#FFD391]" />
               <div className="font-mono text-[11px] tracking-[1.4px] text-white/45">MAYOR FOCO DE ERROR</div>
             </div>
             <div className="text-[32px] font-bold text-white mt-1">
@@ -170,7 +170,7 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
                 return phase.split(' ')[0];
               })()}
             </div>
-            <div className="font-mono text-[10px] tracking-[0.4px] text-[#FFAC91] mt-1 absolute bottom-6">FASE CON MÁS PUNTOS PERDIDOS</div>
+            <div className="font-mono text-[10px] tracking-[0.4px] text-[#FFD391] mt-1 absolute bottom-6">FASE CON MÁS PUNTOS PERDIDOS</div>
           </div>
         </div>
 
@@ -209,7 +209,7 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
                   {subImpact?.subDetails && momentum.findIndex((m:any)=>m.ourScore===subImpact.subDetails.ourScore && m.rivalScore===subImpact.subDetails.rivalScore) > -1 && (
                     <circle 
                       cx={`${(momentum.findIndex((m:any)=>m.ourScore===subImpact.subDetails.ourScore && m.rivalScore===subImpact.subDetails.rivalScore) / Math.max(1, momentum.length - 1)) * 100}`}
-                      cy="50" r="1.5" fill="#FFAC91" 
+                      cy="50" r="1.5" fill="#FFD391" 
                     />
                   )}
                 </svg>
@@ -254,7 +254,7 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
           <div className="absolute left-[40px] top-[190px] flex gap-4 w-[714px]">
             {/* Antes */}
             <div className="glass-card w-[349px] h-[200px] p-6 relative">
-              <div className="font-mono text-[14px] tracking-[1.4px] text-[#FFAC91] mb-6">ANTES DEL CAMBIO</div>
+              <div className="font-mono text-[14px] tracking-[1.4px] text-[#FFD391] mb-6">ANTES DEL CAMBIO</div>
               <div className="flex justify-between mt-4">
                 <div>
                   <div className="text-[28px] font-bold text-white">{subImpact.before.balance > 0 ? `+${subImpact.before.balance}` : subImpact.before.balance}</div>

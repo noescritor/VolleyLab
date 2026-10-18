@@ -427,8 +427,8 @@ export function MatchAnalytics() {
 
       {/* ── Empty state ──────────────────────────────────────────────────── */}
       {(!state.matches || state.matches.length === 0) && (
-        <div className="py-12 text-center border border-dashed border-[#2e4a72]/50 rounded-lg">
-          <p className="text-[13px] text-[#5a6070] mb-4">Sin partidos registrados.</p>
+        <div className="py-12 text-center border border-dashed border-white/[0.08] rounded-lg">
+          <p className="text-[13px] text-white/40 mb-4">Sin partidos registrados.</p>
           <button onClick={() => setIsDialogOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-[#A191FF] hover:bg-[#A191FF]/80 text-black text-label font-semibold rounded-lg transition-colors mx-auto">
             <Plus size={14} />Crear primer partido
@@ -440,7 +440,7 @@ export function MatchAnalytics() {
       {dynStats && dynStats.match && (
         <>
           {/* Header Info */}
-          <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg overflow-hidden shadow-[0_0_15px_rgba(0,229,255,0.05)]">
+          <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg overflow-hidden">
             <div className="px-5 py-4 flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-[#A191FF] tracking-widest uppercase mb-1">{dynStats.match.matchType || 'Oficial'}</p>
@@ -450,8 +450,8 @@ export function MatchAnalytics() {
                 <span className="text-[24px] font-mono font-bold text-white leading-none">{dynStats.match.score || '0-0'}</span>
                 <span className="text-[10px] tracking-wider px-2 py-0.5 rounded border uppercase"
                   style={dynStats.match.result === 'W'
-                    ? { color: '#A191FF', borderColor: '#A191FF', backgroundColor: 'rgba(0,229,255,0.05)' }
-                    : { color: '#FF919F', borderColor: '#FF919F', backgroundColor: 'rgba(255,17,0,0.05)' }}>
+                    ? { color: '#A191FF', borderColor: '#A191FF', backgroundColor: 'rgba(161,145,255,0.08)' }
+                    : { color: '#FF919F', borderColor: '#FF919F', backgroundColor: 'rgba(255,145,159,0.08)' }}>
                   {dynStats.match.result === 'W' ? 'Victoria' : 'Derrota'}
                 </span>
               </div>
@@ -459,20 +459,20 @@ export function MatchAnalytics() {
           </div>
 
           {/* Custom Tabs Navigation */}
-          <div className="flex gap-1 bg-[#11141a] p-1 rounded-lg border border-[#2e4a72]/30 w-fit">
-            <button onClick={() => setActiveTab('heatmaps')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'heatmaps' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+          <div className="flex gap-1 bg-[#0d0d0d] p-1 rounded-lg border border-white/[0.08] w-fit">
+            <button onClick={() => setActiveTab('heatmaps')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'heatmaps' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/40 hover:text-white'}`}>
               Resumen & Heatmaps
             </button>
-            <button onClick={() => setActiveTab('efficiency')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'efficiency' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+            <button onClick={() => setActiveTab('efficiency')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'efficiency' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/40 hover:text-white'}`}>
               Análisis de Eficiencia
             </button>
-            <button onClick={() => setActiveTab('kpis')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'kpis' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+            <button onClick={() => setActiveTab('kpis')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'kpis' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/40 hover:text-white'}`}>
               KPIs Individuales
             </button>
-            <button onClick={() => setActiveTab('timeline')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'timeline' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+            <button onClick={() => setActiveTab('timeline')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'timeline' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/40 hover:text-white'}`}>
               Línea de Tiempo
             </button>
-            <button onClick={() => setActiveTab('insights')} className={`flex items-center gap-2 px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'insights' ? 'bg-[#A191FF] text-black font-semibold' : 'text-[#5a6070] hover:text-white'}`}>
+            <button onClick={() => setActiveTab('insights')} className={`flex items-center gap-2 px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'insights' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/40 hover:text-white'}`}>
               <Zap size={14} /> Insights
             </button>
           </div>
@@ -482,16 +482,16 @@ export function MatchAnalytics() {
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
               {/* Momentum Line Chart */}
               {dynStats.momentum.length > 1 && (
-                <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
+                <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5">
                   <p className="text-[12px] font-semibold text-[#A191FF] uppercase tracking-widest mb-4">Momentum del Partido (Diferencia de Puntos)</p>
                   <div className="h-40">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={dynStats.momentum} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#2e4a72" opacity={0.3} />
-                        <XAxis dataKey="name" tick={{ fill: '#5a6070', fontSize: 10 }} axisLine={false} tickLine={false} minTickGap={20} />
-                        <YAxis tick={{ fill: '#5a6070', fontSize: 10 }} axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={{ backgroundColor: '#0a0c10', border: '1px solid #2e4a72', borderRadius: '8px' }} labelStyle={{ color: '#A191FF', marginBottom: '4px' }} itemStyle={{ color: '#fff', fontSize: '12px' }} />
-                        <ReferenceLine y={0} stroke="#5a6070" strokeWidth={1} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" opacity={1} />
+                        <XAxis dataKey="name" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} minTickGap={20} />
+                        <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <Tooltip contentStyle={{ backgroundColor: '#0d0d0d', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px' }} labelStyle={{ color: '#A191FF', marginBottom: '4px' }} itemStyle={{ color: '#fff', fontSize: '12px' }} />
+                        <ReferenceLine y={0} stroke="rgba(255,255,255,0.25)" strokeWidth={1} />
                         <Line type="monotone" dataKey="diff" name="Diferencia" stroke="#A191FF" strokeWidth={3} dot={{ r: 2, fill: '#A191FF' }} activeDot={{ r: 5, fill: '#fff' }} />
                       </LineChart>
                     </ResponsiveContainer>
@@ -509,13 +509,13 @@ export function MatchAnalytics() {
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
               
               {/* Team Balance Bar */}
-              <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
+              <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5">
                 <p className="text-[12px] font-semibold text-[#A191FF] uppercase tracking-widest mb-4">Balance General del Equipo</p>
                 
                 <div className="flex h-6 rounded-full overflow-hidden mb-3 bg-black">
                   {(() => {
                     const t = dynStats.teamBalance.pos + dynStats.teamBalance.neu + dynStats.teamBalance.neg;
-                    if (t === 0) return <div className="w-full bg-[#2e4a72]/30"></div>;
+                    if (t === 0) return <div className="w-full bg-white/[0.08]"></div>;
                     const pPct = (dynStats.teamBalance.pos / t) * 100;
                     const ePct = (dynStats.teamBalance.neu / t) * 100;
                     const nPct = (dynStats.teamBalance.neg / t) * 100;
@@ -537,18 +537,18 @@ export function MatchAnalytics() {
               </div>
 
               {/* Player Matrix Table */}
-              <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg overflow-x-auto">
+              <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[700px]">
                   <thead>
-                    <tr className="border-b border-[#2e4a72]/50 bg-[#0a0c10]">
-                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-[#5a6070] font-semibold">Jugadora</th>
-                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-[#5a6070] font-semibold text-center">Ataques (+ / = / -)</th>
-                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-[#5a6070] font-semibold text-center">Saques (+ / = / -)</th>
-                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-[#5a6070] font-semibold text-center">Recepción (+ / = / -)</th>
-                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-[#5a6070] font-semibold text-center">Eficacia Total</th>
+                    <tr className="border-b border-white/[0.08] bg-white/[0.03]">
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-white/40 font-semibold">Jugadora</th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-white/40 font-semibold text-center">Ataques (+ / = / -)</th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-white/40 font-semibold text-center">Saques (+ / = / -)</th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-white/40 font-semibold text-center">Recepción (+ / = / -)</th>
+                      <th className="px-4 py-3 text-[10px] uppercase tracking-wider text-white/40 font-semibold text-center">Eficacia Total</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#2e4a72]/20">
+                  <tbody className="divide-y divide-white/[0.06]">
                     {dynStats.players.map((p: any) => {
                       const totalPos = p.attacks.pos + p.serves.pos + p.receptions.pos + p.blocks.pos + p.digs.pos + p.sets.pos;
                       const totalNeg = p.attacks.neg + p.serves.neg + p.receptions.neg + p.blocks.neg + p.digs.neg + p.sets.neg;
@@ -559,7 +559,7 @@ export function MatchAnalytics() {
                         <tr key={p.id} className="hover:bg-white/[0.02] transition-colors">
                           <td className="px-4 py-3">
                             <p className="text-[13px] text-white font-medium">{p.name}</p>
-                            <p className="text-[10px] text-[#5a6070]">{p.position}</p>
+                            <p className="text-[10px] text-white/40">{p.position}</p>
                           </td>
                           <td className="px-4 py-3 text-center font-mono text-[12px]">
                             <span className="text-[#A191FF]">{p.attacks.pos}</span> / <span className="text-[#FFD391]">{p.attacks.neu}</span> / <span className="text-[#FF919F]">{p.attacks.neg}</span>
@@ -580,7 +580,7 @@ export function MatchAnalytics() {
                     })}
                     {dynStats.players.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-[12px] text-[#5a6070]">No hay jugadas registradas para evaluar jugadoras.</td>
+                        <td colSpan={5} className="px-4 py-8 text-center text-[12px] text-white/40">No hay jugadas registradas para evaluar jugadoras.</td>
                       </tr>
                     )}
                   </tbody>
@@ -594,20 +594,20 @@ export function MatchAnalytics() {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               
               {/* General KPIs */}
-              <div className="grid grid-cols-2 divide-x divide-[#2e4a72]/50 bg-[#11141a] border border-[#2e4a72]/50 rounded-lg">
+              <div className="grid grid-cols-2 divide-x divide-white/[0.08] bg-[#0d0d0d] border border-white/[0.08] rounded-lg">
                 <div className="px-5 py-4 text-center">
                   <p className="text-[26px] font-bold font-mono text-[#A191FF]">{dynStats.sideOutPct}%</p>
-                  <p className="text-[10px] uppercase tracking-widest text-[#5a6070] mt-1">Side-Out</p>
+                  <p className="text-[10px] uppercase tracking-widest text-white/40 mt-1">Side-Out</p>
                 </div>
                 <div className="px-5 py-4 text-center">
                   <p className="text-[26px] font-bold font-mono text-white">{dynStats.transPct}%</p>
-                  <p className="text-[10px] uppercase tracking-widest text-[#5a6070] mt-1">Transición</p>
+                  <p className="text-[10px] uppercase tracking-widest text-white/40 mt-1">Transición</p>
                 </div>
               </div>
 
               {/* Fundament tabs + chart */}
-              <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg overflow-hidden">
-                <div className="border-b border-[#2e4a72]/50 flex gap-0 px-2">
+              <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg overflow-hidden">
+                <div className="border-b border-white/[0.08] flex gap-0 px-2">
                   {[
                     { key: 'attacks',   label: 'Ataque',    icon: Target   },
                     { key: 'serves',    label: 'Saque',     icon: Zap      },
@@ -619,7 +619,7 @@ export function MatchAnalytics() {
                       className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-mono uppercase tracking-wider border-b-2 transition-colors ${
                         selectedFundament === key
                           ? 'border-[#A191FF] text-[#A191FF]'
-                          : 'border-transparent text-[#5a6070] hover:text-white'
+                          : 'border-transparent text-white/40 hover:text-white'
                       }`}>
                       <Icon size={12} />{label}
                     </button>
@@ -628,9 +628,9 @@ export function MatchAnalytics() {
                 <div className="px-5 py-4 h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData(selectedFundament)}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#2e4a72" opacity={0.3} />
-                      <XAxis dataKey="name" tick={{ fill: '#5a6070', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#5a6070', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" opacity={1} />
+                      <XAxis dataKey="name" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} axisLine={false} tickLine={false} />
                       <Tooltip {...CHART_TOOLTIP} />
                       <Bar dataKey={fundDataKey[selectedFundament]} fill={FUNDAM_COLOR[selectedFundament] || '#A191FF'} radius={[3,3,0,0]} />
                     </BarChart>
@@ -644,8 +644,8 @@ export function MatchAnalytics() {
                   const kpis = positionKPIs[player.position] || ['attacks'];
                   const posColor = POS_COLORS[player.position] || '#A191FF';
                   return (
-                    <div key={player.id} className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg overflow-hidden">
-                      <div className="px-4 py-3 border-b border-[#2e4a72]/30 flex items-center justify-between">
+                    <div key={player.id} className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg overflow-hidden">
+                      <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
                         <p className="text-[13px] font-semibold text-white">{player.name}</p>
                         <span className="text-[9px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded"
                           style={{ color: posColor, backgroundColor: `${posColor}15` }}>
@@ -655,49 +655,49 @@ export function MatchAnalytics() {
                       <div className="px-4 py-3 space-y-3">
                         {kpis.includes('attacks') && (
                           <div>
-                            <p className="text-[9px] uppercase tracking-widest text-[#5a6070] flex items-center gap-1.5 mb-1.5"><Target size={10} />Ataque</p>
+                            <p className="text-[9px] uppercase tracking-widest text-white/40 flex items-center gap-1.5 mb-1.5"><Target size={10} />Ataque</p>
                             <div className="grid grid-cols-2 gap-2">
-                              <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
+                              <div className="bg-white/[0.03] border border-white/[0.08] rounded p-2 text-center">
                                 <p className="text-[16px] font-bold font-mono text-white">
                                   {player.attacks.attempts > 0 ? (((player.attacks.pos - player.attacks.neg) / player.attacks.attempts) * 100).toFixed(1) : 0}%
                                 </p>
-                                <p className="text-[9px] font-mono text-[#5a6070]">EFICACIA</p>
+                                <p className="text-[9px] font-mono text-white/40">EFICACIA</p>
                               </div>
-                              <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
+                              <div className="bg-white/[0.03] border border-white/[0.08] rounded p-2 text-center">
                                 <p className="text-[16px] font-bold font-mono text-white">{player.attacks.pos}/{player.attacks.attempts}</p>
-                                <p className="text-[9px] font-mono text-[#5a6070]">KILLS (+)</p>
+                                <p className="text-[9px] font-mono text-white/40">KILLS (+)</p>
                               </div>
                             </div>
                           </div>
                         )}
                         {kpis.includes('serves') && (
                           <div>
-                            <p className="text-[9px] uppercase tracking-widest text-[#5a6070] flex items-center gap-1.5 mb-1.5"><Zap size={10} />Saque</p>
+                            <p className="text-[9px] uppercase tracking-widest text-white/40 flex items-center gap-1.5 mb-1.5"><Zap size={10} />Saque</p>
                             <div className="grid grid-cols-2 gap-2">
-                              <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
+                              <div className="bg-white/[0.03] border border-white/[0.08] rounded p-2 text-center">
                                 <p className="text-[16px] font-bold font-mono text-[#A191FF]">{player.serves.pos}</p>
-                                <p className="text-[9px] font-mono text-[#5a6070]">ACES</p>
+                                <p className="text-[9px] font-mono text-white/40">ACES</p>
                               </div>
-                              <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
+                              <div className="bg-white/[0.03] border border-white/[0.08] rounded p-2 text-center">
                                 <p className="text-[16px] font-bold font-mono text-[#FF919F]">{player.serves.neg}</p>
-                                <p className="text-[9px] font-mono text-[#5a6070]">ERRORES</p>
+                                <p className="text-[9px] font-mono text-white/40">ERRORES</p>
                               </div>
                             </div>
                           </div>
                         )}
                         {kpis.includes('reception') && (
                           <div>
-                            <p className="text-[9px] uppercase tracking-widest text-[#5a6070] flex items-center gap-1.5 mb-1.5"><Activity size={10} />Recepción</p>
+                            <p className="text-[9px] uppercase tracking-widest text-white/40 flex items-center gap-1.5 mb-1.5"><Activity size={10} />Recepción</p>
                             <div className="grid grid-cols-2 gap-2">
-                              <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
+                              <div className="bg-white/[0.03] border border-white/[0.08] rounded p-2 text-center">
                                 <p className="text-[16px] font-bold font-mono text-white">
                                   {player.receptions.attempts > 0 ? ((player.receptions.pos - player.receptions.neg) / player.receptions.attempts).toFixed(2) : 0}
                                 </p>
-                                <p className="text-[9px] font-mono text-[#5a6070]">EFICIENCIA</p>
+                                <p className="text-[9px] font-mono text-white/40">EFICIENCIA</p>
                               </div>
-                              <div className="bg-[#0a0c10] border border-[#2e4a72]/30 rounded p-2 text-center">
+                              <div className="bg-white/[0.03] border border-white/[0.08] rounded p-2 text-center">
                                 <p className="text-[16px] font-bold font-mono text-[#A191FF]">{player.receptions.pos}/{player.receptions.attempts}</p>
-                                <p className="text-[9px] font-mono text-[#5a6070]">PERFECTAS</p>
+                                <p className="text-[9px] font-mono text-white/40">PERFECTAS</p>
                               </div>
                             </div>
                           </div>
@@ -714,32 +714,32 @@ export function MatchAnalytics() {
           {activeTab === 'timeline' && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               
-              <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
+              <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5">
                 <p className="text-[12px] font-semibold text-[#A191FF] uppercase tracking-widest mb-4">Frecuencia de Errores por Fase de Set</p>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={dynStats.errorPhaseFreq} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#2e4a72" opacity={0.3} />
-                      <XAxis dataKey="name" tick={{ fill: '#5a6070', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#5a6070', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" opacity={1} />
+                      <XAxis dataKey="name" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} axisLine={false} tickLine={false} />
                       <Tooltip {...CHART_TOOLTIP} />
                       <Bar dataKey="Saque" stackId="a" fill="#FFD391" name="Errores de Saque" />
                       <Bar dataKey="Ataque" stackId="a" fill="#A191FF" name="Errores de Ataque/Dejada" />
                       <Bar dataKey="Recepcion" stackId="a" fill="#91FFB0" name="Errores de Recepción" />
-                      <Bar dataKey="Bloqueo" stackId="a" fill="#A191FF" name="Errores de Bloqueo" />
+                      <Bar dataKey="Bloqueo" stackId="a" fill="#DC91FF" name="Errores de Bloqueo" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               {dynStats.match.timeline && dynStats.match.timeline.length > 0 && (
-                <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
+                <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5">
                   <p className="text-[12px] font-semibold text-[#A191FF] uppercase tracking-widest mb-4">Línea de Tiempo del Partido</p>
-                  <div className="space-y-3 pl-2 border-l border-[#2e4a72]/30">
+                  <div className="space-y-3 pl-2 border-l border-white/[0.08]">
                     {dynStats.match.timeline.map((evt: any, i: number) => (
                       <div key={i} className="relative pl-4">
                         <div className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-[#A191FF]"></div>
-                        <p className="text-[11px] text-[#5a6070] font-mono mb-1">
+                        <p className="text-[11px] text-white/40 font-mono mb-1">
                           {evt.type === 'timeout' ? 'TIEMPO FUERA' : evt.type === 'sub' ? 'CAMBIO' : 'RALLY'}
                         </p>
                         {evt.type === 'timeout' && (
@@ -749,7 +749,7 @@ export function MatchAnalytics() {
                         )}
                         {evt.type === 'sub' && (
                           <p className="text-[13px] text-white">
-                            Entra <span className="text-[#A191FF]">{evt.in}</span> x Sale <span className="text-[#5a6070]">{evt.out}</span>
+                            Entra <span className="text-[#A191FF]">{evt.in}</span> x Sale <span className="text-white/40">{evt.out}</span>
                           </p>
                         )}
                         {evt.type === 'rally' && evt.data && (
@@ -771,7 +771,7 @@ export function MatchAnalytics() {
           {activeTab === 'insights' && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
               
-              <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
+              <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <TrendingUp className="text-[#A191FF]" size={16} />
                   <h3 className="text-[13px] font-semibold text-white">Impacto de Sustituciones</h3>
@@ -784,7 +784,7 @@ export function MatchAnalytics() {
                   <div className="flex gap-4">
                     {/* Antes */}
                     <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-lg p-5 relative overflow-hidden">
-                      <div className="font-mono text-[11px] tracking-[1.4px] text-[#FFAC91] mb-6">ANTES DEL CAMBIO</div>
+                      <div className="font-mono text-[11px] tracking-[1.4px] text-[#FFD391] mb-6">ANTES DEL CAMBIO</div>
                       <div className="flex justify-between mt-4">
                         <div>
                           <div className="text-[24px] font-bold text-white">{dynStats.subImpact.before.balance > 0 ? `+${dynStats.subImpact.before.balance}` : dynStats.subImpact.before.balance}</div>
@@ -823,7 +823,7 @@ export function MatchAnalytics() {
                 )}
               </div>
 
-              <div className="bg-[#11141a] border border-[#2e4a72]/50 rounded-lg p-5">
+              <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5">
                 <div className="flex items-center gap-2 mb-6">
                   <Activity className="text-[#A191FF]" size={16} />
                   <h3 className="text-[13px] font-semibold text-white">Proyección Histórica (Últimos 5 partidos)</h3>

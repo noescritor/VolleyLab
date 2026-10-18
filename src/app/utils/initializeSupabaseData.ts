@@ -30,7 +30,7 @@ export async function initializeSupabaseData() {
         categoria: 'Primera División',
         division: 'Liga Nacional',
         entrenador_principal: 'Ana María González',
-        color_primario: '#2563EB',
+        color_primario: '#A191FF',
         color_secundario: '#ffffff'
       });
     } else {
@@ -295,8 +295,8 @@ export async function createSampleMatch() {
       nombre: 'Águilas Doradas',
       temporada: '2024-2025',
       categoria: 'Primera División',
-      color_primario: '#DC2626',
-      color_secundario: '#FCD34D'
+      color_primario: '#FF919F',
+      color_secundario: '#FFD391'
     });
 
     // Create starting rotations

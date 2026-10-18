@@ -81,12 +81,12 @@ export function TeamDashboard() {
   ];
 
   const rotationData = [
-    { rotation: 1, sideOut: 72.5, color: '#2563EB' },
-    { rotation: 2, sideOut: 68.2, color: '#3B82F6' },
-    { rotation: 3, sideOut: 65.8, color: '#60A5FA' },
-    { rotation: 4, sideOut: 71.3, color: '#93C5FD' },
-    { rotation: 5, sideOut: 69.7, color: '#DBEAFE' },
-    { rotation: 6, sideOut: 74.1, color: '#1D4ED8' }
+    { rotation: 1, sideOut: 72.5, color: '#A191FF' },
+    { rotation: 2, sideOut: 68.2, color: '#91CAFF' },
+    { rotation: 3, sideOut: 65.8, color: '#91FFB0' },
+    { rotation: 4, sideOut: 71.3, color: '#FFD391' },
+    { rotation: 5, sideOut: 69.7, color: '#FF919F' },
+    { rotation: 6, sideOut: 74.1, color: '#DC91FF' }
   ];
 
   const heatmapData = [
@@ -306,8 +306,8 @@ export function TeamDashboard() {
             <TrendLine 
               data={trendData}
               lines={[
-                { key: 'saltoPromedio', name: 'Salto Promedio (cm)', color: '#2563EB' },
-                { key: 'recepcionPerfecta', name: 'Recepción Perfecta (%)', color: '#16A34A' }
+                { key: 'saltoPromedio', name: 'Salto Promedio (cm)', color: '#A191FF' },
+                { key: 'recepcionPerfecta', name: 'Recepción Perfecta (%)', color: '#91FFB0' }
               ]}
               height={350}
             />
