@@ -858,7 +858,7 @@ export default function LiveMatchCenter() {
       if (s.our > s.rival) ourSets++;
       else if (s.rival > s.our) rivalSets++;
     });
-    const resultStr = ourSets >= rivalSets ? 'W' : 'L';
+    const resultStr: 'W' | 'L' | 'D' = ourSets > rivalSets ? 'W' : ourSets < rivalSets ? 'L' : 'D';
 
     try {
       await createMatch({

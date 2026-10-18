@@ -38,7 +38,7 @@ interface Match {
   venue?: string;
   matchType: string;
   notes?: string;
-  result?: 'W' | 'L' | null;
+  result?: 'W' | 'L' | 'D' | null;
   score?: string | null;
   sideOut?: number;
   transition?: number;

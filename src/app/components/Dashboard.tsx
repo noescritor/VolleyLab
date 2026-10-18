@@ -282,10 +282,12 @@ export function Dashboard() {
                       style={
                         m.result === "W"
                           ? { color: "#91FFB0", backgroundColor: "rgba(145,255,176,0.08)" }
+                          : m.result === "D"
+                          ? { color: "#FFD391", backgroundColor: "rgba(255,211,145,0.08)" }
                           : { color: "#FF919F", backgroundColor: "rgba(255,145,159,0.08)" }
                       }
                     >
-                      {m.result === "W" ? "VICTORIA" : "DERROTA"}
+                      {m.result === "W" ? "VICTORIA" : m.result === "D" ? "EMPATE" : "DERROTA"}
                     </span>
                   </td>
                   <td className="px-5 py-3 text-[13px] text-white">vs {m.opponent}</td>
