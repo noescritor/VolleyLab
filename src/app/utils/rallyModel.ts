@@ -142,9 +142,9 @@ export function computeRotation(
     }
   }
 
-  // Si no se encuentra un colocador explícito, usar rotación base + rotaciones aplicadas
-  const rot = ((fallbackRotationCount % 6) + 6) % 6;
-  return (rot === 0 ? 6 : rot) as Rotation;
+  // Si no se encuentra un colocador explícito, rotar en orden descendente (1 -> 6 -> 5 -> 4 -> 3 -> 2 -> 1)
+  const rem = (((1 - (fallbackRotationCount % 6)) % 6) + 6) % 6;
+  return (rem === 0 ? 6 : rem) as Rotation;
 }
 
 /**

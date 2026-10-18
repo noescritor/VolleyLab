@@ -99,11 +99,16 @@ describe('rallyModel unit tests', () => {
       expect(computeRotation(lineupP4, players)).toBe(4);
     });
 
-    it('falls back to rotation count if no setter in court', () => {
+    it('falls back to rotation count if no setter in court (descending 1 -> 6 -> 5 -> 4 -> 3 -> 2 -> 1)', () => {
       const emptyLineup: LineupMap = { p1: null, p2: null, p3: null, p4: null, p5: null, p6: null };
-      expect(computeRotation(emptyLineup, players, 0)).toBe(6);
-      expect(computeRotation(emptyLineup, players, 1)).toBe(1);
-      expect(computeRotation(emptyLineup, players, 3)).toBe(3);
+      expect(computeRotation(emptyLineup, players, 0)).toBe(1);
+      expect(computeRotation(emptyLineup, players, 1)).toBe(6);
+      expect(computeRotation(emptyLineup, players, 2)).toBe(5);
+      expect(computeRotation(emptyLineup, players, 3)).toBe(4);
+      expect(computeRotation(emptyLineup, players, 4)).toBe(3);
+      expect(computeRotation(emptyLineup, players, 5)).toBe(2);
+      expect(computeRotation(emptyLineup, players, 6)).toBe(1);
+      expect(computeRotation(emptyLineup, players, 7)).toBe(6);
     });
 
     it('uses setter position primarily even when rotationCount is provided', () => {
