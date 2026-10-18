@@ -612,7 +612,8 @@ export default function LiveMatchCenter() {
   /* — Undo History — */
   const snap = () => ({
     ourScore, rivalScore, lineup: dc(lineup),
-    currentRallyActions: dc(currentRallyActions), subsUsed, ourTimeouts, rivalTimeouts
+    currentRallyActions: dc(currentRallyActions), subsUsed, ourTimeouts, rivalTimeouts,
+    allRallies: dc(allRallies), timeline: dc(timeline)
   });
   const pushH = () => setHist(h => [...h.slice(-19), snap()]);
 
@@ -626,9 +627,25 @@ export default function LiveMatchCenter() {
     setSubsUsed(p.subsUsed);
     setOurTimeouts(p.ourTimeouts);
     setRivalTimeouts(p.rivalTimeouts);
+    if (p.allRallies) setAllRallies(p.allRallies);
+    if (p.timeline) setTimeline(p.timeline);
     setHist(h => h.slice(0, -1));
     setMsg("deshecho");
   };
+
+  /* — Deduce serving team from previous rally in the current set — */
+  const getCurrentServingTeam = (actionsInRally: any[]): 'our' | 'rival' => {
+    const setRallies = allRallies.filter((r: any) => r.setNum === setNum);
+    if (setRallies.length > 0) {
+      return setRallies[setRallies.length - 1].winner === 'our' ? 'our' : 'rival';
+    }
+    const firstAction = actionsInRally?.[0];
+    if (firstAction?.gesture === 'saque' && firstAction.playerId) return 'our';
+    if (firstAction?.gesture === 'recepcion' || firstAction?.gesture === 'recepción') return 'rival';
+    return 'our';
+  };
+
+  const rotateLineup = (l: any) => ({ p1: l.p2, p2: l.p3, p3: l.p4, p4: l.p5, p5: l.p6, p6: l.p1 });
 
   const doFlash = (side: string) => {
     setFlash(side);
@@ -657,7 +674,6 @@ export default function LiveMatchCenter() {
   /* ── 3. RALLY LOGIC (Neutral, Pos, Neg) ── */
   const regResult = (key: string) => {
     if (!selP) return;
-    pushH();
 
     const action = {
       playerId: selP,
@@ -668,6 +684,7 @@ export default function LiveMatchCenter() {
 
     if (key === "neu") {
       // Neutral: Agrega a la lista pero NO cierra el punto
+      pushH();
       setCurrentRallyActions(prev => [...prev, action]);
       setMsg(`Neutral: ${gLabel} de ${getPlayerName(selP)}`);
     } else if (key === "pos") {
@@ -685,17 +702,25 @@ export default function LiveMatchCenter() {
     
     // Si fue falta técnica, no necesitamos heatmap, terminamos el rally aquí.
     if (reason === 'Falta Técnica') {
+      pushH();
       const finalActions = [...currentRallyActions, actionWithError];
+      const servingTeam = getCurrentServingTeam(finalActions);
+      const nextOurScore = ourScore;
+      const nextRivalScore = rivalScore + 1;
       const newRally = {
         id: Date.now().toString(),
-        winner: 'rival',
+        winner: 'rival' as const,
+        servingTeam,
+        ourScore: nextOurScore,
+        rivalScore: nextRivalScore,
+        setNum,
         endLocation: 'falta',
         actions: finalActions,
         lineup: dc(lineup)
       };
       setAllRallies(prev => [...prev, newRally]);
       setTimeline(prev => [...prev, { type: 'rally', data: newRally }]);
-      setRivalScore(s => s + 1);
+      setRivalScore(nextRivalScore);
       doFlash("rival");
       setMsg(`Punto rival (Falta de ${getPlayerName(actionWithError.playerId)})`);
       setCurrentRallyActions([]);
@@ -732,10 +757,18 @@ export default function LiveMatchCenter() {
       finalActions.push(pendingEndResult.action);
     }
 
+    const servingTeam = getCurrentServingTeam(finalActions);
+    const nextOurScore = pendingEndResult.winner === 'our' ? ourScore + 1 : ourScore;
+    const nextRivalScore = pendingEndResult.winner === 'rival' ? rivalScore + 1 : rivalScore;
+
     // Save rally globally
     const newRally = {
       id: Date.now().toString(),
       winner: pendingEndResult.winner,
+      servingTeam,
+      ourScore: nextOurScore,
+      rivalScore: nextRivalScore,
+      setNum,
       endLocation: targetZone,
       impact: skipHeatmap ? null : { ...finalImpact, plane },
       actions: finalActions,
@@ -744,13 +777,18 @@ export default function LiveMatchCenter() {
     setAllRallies(prev => [...prev, newRally]);
     setTimeline(prev => [...prev, { type: 'rally', data: newRally }]);
 
-    // Update Score
+    // Update Score & automatic rotation on side-out won
     if (pendingEndResult.winner === "our") {
-      setOurScore(s => s + 1);
+      setOurScore(nextOurScore);
       doFlash("our");
-      setMsg("¡Punto ganado!");
+      if (servingTeam === "rival") {
+        setLineup((l: any) => rotateLineup(l));
+        setMsg("¡Side-out ganado! Rotación automática");
+      } else {
+        setMsg("¡Punto ganado!");
+      }
     } else {
-      setRivalScore(s => s + 1);
+      setRivalScore(nextRivalScore);
       doFlash("rival");
       setMsg("Punto perdido.");
     }
@@ -763,17 +801,17 @@ export default function LiveMatchCenter() {
   /* ── ROTATE, TIMEOUTS & SUBS ── */
   const rotate = () => {
     pushH();
-    setLineup((l:any) => ({ p1:l.p2, p2:l.p3, p3:l.p4, p4:l.p5, p5:l.p6, p6:l.p1 }));
+    setLineup((l:any) => rotateLineup(l));
     setMsg("Rotación aplicada");
   };
 
   const callTimeout = (team: 'our'|'rival') => {
+    if (team === 'our' && ourTimeouts >= 2) { setMsg("Ya usaste tus 2 tiempos"); return; }
+    if (team === 'rival' && rivalTimeouts >= 2) { setMsg("El rival ya usó sus 2 tiempos"); return; }
     pushH();
     if (team === 'our') {
-      if (ourTimeouts >= 2) { setMsg("Ya usaste tus 2 tiempos"); return; }
       setOurTimeouts(t => t + 1);
     } else {
-      if (rivalTimeouts >= 2) { setMsg("El rival ya usó sus 2 tiempos"); return; }
       setRivalTimeouts(t => t + 1);
     }
     setTimeline(prev => [...prev, { type: 'timeout', team, ourScore, rivalScore }]);
@@ -807,6 +845,14 @@ export default function LiveMatchCenter() {
     setScreen("lineup");
   };
 
+  const getLocalDateString = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   const endMatch = async () => {
     if (isSaving) return;
     setIsSaving(true);
@@ -821,21 +867,24 @@ export default function LiveMatchCenter() {
       if (s.our > s.rival) ourSets++;
       else if (s.rival > s.our) rivalSets++;
     });
-    const resultStr = ourSets > rivalSets ? 'W' : (rivalSets > ourSets ? 'L' : 'D');
+    const resultStr = ourSets >= rivalSets ? 'W' : 'L';
 
     try {
       await createMatch({
         opponent, 
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalDateString(),
         matchType, 
         players: [], 
         score: scoreStr,
         result: resultStr,
         rallies: allRallies,
-        timeline // Save the timeline history!
+        timeline
       } as any);
 
+      localStorage.removeItem("volleyLab_liveMatch");
+
       setTimeout(() => {
+        localStorage.removeItem("volleyLab_liveMatch");
         setScreen("setup");
         setAllRallies([]);
         setTimeline([]);

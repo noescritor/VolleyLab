@@ -244,6 +244,7 @@ function convertSupabaseMatchToLegacy(sm: any): Match {
     result: sm.match_metadata?.result,
     score: sm.match_metadata?.score,
     rallies: sm.match_metadata?.rallies || [],
+    timeline: sm.match_metadata?.timeline || [],
     players: [],
     createdAt: sm.created_at,
     updatedAt: sm.created_at
@@ -442,7 +443,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             notes: matchData.notes,
             result: matchData.result,
             score: matchData.score,
-            rallies: (matchData as any).rallies || []
+            rallies: (matchData as any).rallies || [],
+            timeline: (matchData as any).timeline || []
           }
         });
         
@@ -455,6 +457,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error creating match:', error);
       toast.error('Error al crear partido');
+      throw error;
     }
   };
 

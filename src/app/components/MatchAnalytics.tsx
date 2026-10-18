@@ -73,31 +73,41 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
     };
   });
 
-  rallies.forEach((r: any, idx: number) => {
-    const totalPts = (r.ourScore || 0) + (r.rivalScore || 0);
+  let prevWinnerBySet: Record<number, 'our' | 'rival'> = {};
+  rallies.forEach((r: any) => {
+    const oScore = r.ourScore ?? 0;
+    const rScore = r.rivalScore ?? 0;
+    const totalPts = oScore + rScore;
     const pIdx = totalPts <= 15 ? 0 : totalPts <= 32 ? 1 : 2;
+    const sNum = r.setNum || 1;
 
     momentum.push({
-      name: `${r.ourScore}-${r.rivalScore}`,
-      diff: r.ourScore - r.rivalScore,
-      ourScore: r.ourScore,
-      rivalScore: r.rivalScore
+      name: `${oScore}-${rScore}`,
+      diff: oScore - rScore,
+      ourScore: oScore,
+      rivalScore: rScore
     });
 
-    // Simulate Sideout/Transition based on serve (very basic heuristic)
+    // Side-out and Transition based on servingTeam (or deduced from previous rally winner / first action)
     const firstAction = r.actions?.[0];
-    if (firstAction && firstAction.gesture === 'saque') {
-      if (firstAction.playerId) { // We served -> Transition phase for us
-        transitionChances++;
-        if (r.winner === 'our') transitionSuccess++;
-      } else { // They served -> Sideout phase for us
-        sideOutChances++;
-        if (r.winner === 'our') sideOutSuccess++;
-      }
-    } else {
-      // Seed data heuristic
-      if (idx % 2 === 0) { sideOutChances++; if(r.winner === 'our') sideOutSuccess++; }
-      else { transitionChances++; if(r.winner === 'our') transitionSuccess++; }
+    const servingTeam: 'our' | 'rival' | null =
+      r.servingTeam ||
+      prevWinnerBySet[sNum] ||
+      (firstAction && firstAction.gesture === 'saque'
+        ? (firstAction.playerId ? 'our' : 'rival')
+        : (firstAction && (firstAction.gesture === 'recepción' || firstAction.gesture === 'recepcion')
+          ? 'rival'
+          : null));
+
+    if (servingTeam === 'our') {
+      transitionChances++;
+      if (r.winner === 'our') transitionSuccess++;
+    } else if (servingTeam === 'rival') {
+      sideOutChances++;
+      if (r.winner === 'our') sideOutSuccess++;
+    }
+    if (r.winner === 'our' || r.winner === 'rival') {
+      prevWinnerBySet[sNum] = r.winner;
     }
 
     if (r.actions && r.actions.length > 0) {
@@ -116,7 +126,7 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
           else if (g === 'recepción' || g === 'recepcion') errorPhaseFreq[pIdx].Recepcion++;
           else if (g === 'bloqueo') errorPhaseFreq[pIdx].Bloqueo++;
         }
-        if (g === 'ataque' || g === 'ataque ') {
+        if (g === 'ataque' || g === 'ataque ' || g === 'dejada') {
           s.attacks[q]++;
           s.attacks.attempts++;
           if (q === 'pos') s.attacks.kills++;
@@ -134,6 +144,12 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
         else if (g === 'bloqueo') {
           s.blocks[q]++;
           if (q === 'pos') s.blocks.stuffs++;
+        }
+        else if (g === 'defensa') {
+          s.digs[q]++;
+        }
+        else if (g === 'armado' || g === 'acomodo') {
+          s.sets[q]++;
         }
       });
     } else {
@@ -172,7 +188,7 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
         else if (g === 'defensa') {
           s.digs[q]++;
         }
-        else if (g === 'acomodo') {
+        else if (g === 'armado' || g === 'acomodo') {
           s.sets[q]++;
         }
       }
@@ -191,14 +207,28 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
     let histSOChances = 0, histSOSuccess = 0, histTrChances = 0, histTrSuccess = 0;
     
     pastMatches.forEach((m: any) => {
-      (m.rallies || []).forEach((r: any, idx: number) => {
+      let histPrevWinnerBySet: Record<number, 'our' | 'rival'> = {};
+      (m.rallies || []).forEach((r: any) => {
+        const sNum = r.setNum || 1;
         const firstAction = r.actions?.[0];
-        if (firstAction && firstAction.gesture === 'saque') {
-          if (firstAction.playerId) { histTrChances++; if (r.winner === 'our') histTrSuccess++; }
-          else { histSOChances++; if (r.winner === 'our') histSOSuccess++; }
-        } else {
-          if (idx % 2 === 0) { histSOChances++; if(r.winner === 'our') histSOSuccess++; }
-          else { histTrChances++; if(r.winner === 'our') histTrSuccess++; }
+        const servingTeam: 'our' | 'rival' | null =
+          r.servingTeam ||
+          histPrevWinnerBySet[sNum] ||
+          (firstAction && firstAction.gesture === 'saque'
+            ? (firstAction.playerId ? 'our' : 'rival')
+            : (firstAction && (firstAction.gesture === 'recepción' || firstAction.gesture === 'recepcion')
+              ? 'rival'
+              : null));
+
+        if (servingTeam === 'our') {
+          histTrChances++;
+          if (r.winner === 'our') histTrSuccess++;
+        } else if (servingTeam === 'rival') {
+          histSOChances++;
+          if (r.winner === 'our') histSOSuccess++;
+        }
+        if (r.winner === 'our' || r.winner === 'rival') {
+          histPrevWinnerBySet[sNum] = r.winner;
         }
       });
     });
@@ -262,7 +292,9 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
     errorPhaseFreq,
     players: Object.values(pStats).filter((p: any) => 
       p.attacks.attempts > 0 || p.serves.pos > 0 || p.serves.neg > 0 || p.serves.neu > 0 || 
-      p.receptions.attempts > 0 || p.blocks.pos > 0 || p.blocks.neg > 0 || p.blocks.neu > 0
+      p.receptions.attempts > 0 || p.blocks.pos > 0 || p.blocks.neg > 0 || p.blocks.neu > 0 ||
+      p.digs.pos > 0 || p.digs.neg > 0 || p.digs.neu > 0 ||
+      p.sets.pos > 0 || p.sets.neg > 0 || p.sets.neu > 0
     ),
     sideOutPct: sideOutChances > 0 ? Math.round((sideOutSuccess/sideOutChances)*100) : 0,
     transPct: transitionChances > 0 ? Math.round((transitionSuccess/transitionChances)*100) : 0,
@@ -518,9 +550,9 @@ export function MatchAnalytics() {
                   </thead>
                   <tbody className="divide-y divide-[#2e4a72]/20">
                     {dynStats.players.map((p: any) => {
-                      const totalPos = p.attacks.pos + p.serves.pos + p.receptions.pos + p.blocks.pos;
-                      const totalNeg = p.attacks.neg + p.serves.neg + p.receptions.neg + p.blocks.neg;
-                      const totalAtt = totalPos + totalNeg + p.attacks.neu + p.serves.neu + p.receptions.neu + p.blocks.neu;
+                      const totalPos = p.attacks.pos + p.serves.pos + p.receptions.pos + p.blocks.pos + p.digs.pos + p.sets.pos;
+                      const totalNeg = p.attacks.neg + p.serves.neg + p.receptions.neg + p.blocks.neg + p.digs.neg + p.sets.neg;
+                      const totalAtt = totalPos + totalNeg + p.attacks.neu + p.serves.neu + p.receptions.neu + p.blocks.neu + p.digs.neu + p.sets.neu;
                       const eff = totalAtt > 0 ? ((totalPos - totalNeg) / totalAtt * 100).toFixed(1) : '0.0';
 
                       return (
