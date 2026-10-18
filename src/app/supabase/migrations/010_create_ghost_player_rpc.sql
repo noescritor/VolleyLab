@@ -39,6 +39,15 @@ BEGIN
     RAISE EXCEPTION 'No autorizado: el usuario no es miembro activo de esta organización';
   END IF;
 
+  -- Si p_team_id no es null, validar que pertenezca a p_org_id
+  IF p_team_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.teams
+    WHERE id = p_team_id
+      AND org_id = p_org_id
+  ) THEN
+    RAISE EXCEPTION 'El equipo especificado no pertenece a esta organización';
+  END IF;
+
   -- Generar athlete_id si no se provee
   IF p_global_athlete_id IS NULL OR trim(p_global_athlete_id) = '' THEN
     v_athlete_id := 'VLL-GHOST-' || gen_random_uuid()::text;
