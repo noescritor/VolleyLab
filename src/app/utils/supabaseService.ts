@@ -402,11 +402,8 @@ class SupabaseService {
   }
 
   async createPhysicalTest(formData: any) {
-    console.log('[DEBUG] createPhysicalTest called with:', JSON.stringify(formData, null, 2));
-    
     const orgId = await this.getUserOrg();
     const user  = await this.getCurrentUser();
-    console.log('[DEBUG] orgId:', orgId, '| userId:', user?.id);
     
     if (!orgId || !user) throw new Error(`Sin contexto: orgId=${orgId}, userId=${user?.id}`);
 
@@ -430,8 +427,6 @@ class SupabaseService {
       ankle_rom:     formData.ankleROM     ? parseFloat(formData.ankleROM)     : null,
     };
 
-    console.log('[DEBUG] Inserting row:', JSON.stringify(row, null, 2));
-
     const { data, error } = await this.supabase
       .from('player_tests')
       .insert(row)
@@ -439,11 +434,9 @@ class SupabaseService {
       .single();
 
     if (error) {
-      console.error('[DEBUG] Supabase insert error:', JSON.stringify(error, null, 2));
       throw new Error(`Supabase: ${error.message} (code: ${error.code}, details: ${error.details})`);
     }
     
-    console.log('[DEBUG] Insert success:', data);
     return data;
   }
 

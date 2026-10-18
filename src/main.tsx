@@ -1,8 +1,8 @@
   import { createRoot } from "react-dom/client";
   import { BrowserRouter, Routes, Route } from "react-router";
-  import App from "./app/App.tsx";
-  import { AuthPage } from "./app/components/auth/AuthPage.tsx";
-  import { ProtectedRoute } from "./app/components/auth/ProtectedRoute.tsx";
+  import App from "./app/App";
+  import { AuthPage } from "./app/components/auth/AuthPage";
+  import { ProtectedRoute } from "./app/components/auth/ProtectedRoute";
   import "./styles/index.css";
 
   import { Toaster } from "./app/components/ui/sonner";

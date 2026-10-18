@@ -205,7 +205,7 @@ export function AnalyticsDashboard({ matchId, timeframe: initTimeframe = 'curren
           <p className="text-[12px] text-white/30 mt-0.5">Insights tácticos y métricas con IA</p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={timeframe} onValueChange={setTimeframe}>
+          <Select value={timeframe} onValueChange={(v) => setTimeframe(v as 'current' | 'last5' | 'season')}>
             <SelectTrigger className="w-44 bg-white/[0.04] border-white/[0.08] text-[13px] text-white">
               <SelectValue />
             </SelectTrigger>

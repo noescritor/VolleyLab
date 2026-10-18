@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../../utils/supabase/globalClient';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router';
 import { Loader2, Activity, Users, TrendingUp, BarChart3, Zap, ArrowRight, Check } from 'lucide-react';
 import { VolleyLabLogo } from '../VolleyLabLogo';

@@ -66,7 +66,7 @@ const BLANK_FORM = {
   benchPress: '', squat: '', deadlift: '', cooperTest: '', sitAndReach: ''
 };
 
-function getLevel(value, test) {
+function getLevel(value: any, test: any) {
   if (!value || !test.target) return 'unknown';
   const v = parseFloat(value);
   if (test.reverse) {
@@ -83,7 +83,7 @@ function getLevel(value, test) {
 }
 
 function levelBadge(level: string) {
-  const map = {
+  const map: Record<string, { color: string; bg: string; label: string }> = {
     excellent: { color: '#91FFB0', bg: 'rgba(145,255,176,0.08)', label: 'EXCELENTE' },
     good:      { color: '#91CAFF', bg: 'rgba(145,202,255,0.08)', label: 'BUENO'     },
     average:   { color: '#FFD391', bg: 'rgba(255,211,145,0.08)', label: 'PROMEDIO'  },
@@ -111,7 +111,7 @@ export function PhysicalTesting() {
   const [selectedPlayer, setSelectedPlayer] = useState('all');
   const [isDialogOpen, setIsDialogOpen]     = useState(false);
   const [activeCategory, setActiveCategory] = useState('jump');
-  const [editingTest, setEditingTest]       = useState(null);
+  const [editingTest, setEditingTest]       = useState<any>(null);
   const [formTab, setFormTab]               = useState('jump');
 
   const playerTestHistory = physicalTests.filter(t =>
@@ -125,15 +125,15 @@ export function PhysicalTesting() {
     squat:      t.squat,
   }));
 
-  const handleEditTest  = (test) => { setEditingTest(test); setIsDialogOpen(true); };
-  const handleNewTest   = ()     => { setEditingTest(null);  setIsDialogOpen(true); };
-  const handleDeleteTest = async (id) => {
+  const handleEditTest  = (test: any) => { setEditingTest(test); setIsDialogOpen(true); };
+  const handleNewTest   = ()          => { setEditingTest(null);  setIsDialogOpen(true); };
+  const handleDeleteTest = async (id: any) => {
     if (window.confirm('¿Eliminar este test?')) await deletePhysicalTest(id);
   };
 
   // ── Test Form ─────────────────────────────────────────────────────────────
   function TestForm() {
-    const [formData, setFormData] = useState({ ...BLANK_FORM });
+    const [formData, setFormData] = useState<Record<string, any>>({ ...BLANK_FORM });
 
     useEffect(() => {
       setFormData(editingTest
@@ -147,9 +147,9 @@ export function PhysicalTesting() {
         : { ...BLANK_FORM });
     }, []);
 
-    const set = (k, v) => setFormData(p => ({ ...p, [k]: v }));
+    const set = (k: string, v: any) => setFormData(p => ({ ...p, [k]: v }));
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       if (editingTest) updatePhysicalTest(editingTest.id, formData);
       else createPhysicalTest(formData);
@@ -195,7 +195,7 @@ export function PhysicalTesting() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {testCategories[formTab].tests.map(test => (
+          {(testCategories as Record<string, any>)[formTab].tests.map((test: any) => (
             <div key={test.key}>
               <label className={LABEL_CLS}>{test.name} ({test.unit})</label>
               <input type="number" step="0.01"
@@ -302,7 +302,7 @@ export function PhysicalTesting() {
         </div>
 
         <div className="p-4 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-          {testCategories[activeCategory].tests.map(test => (
+          {(testCategories as Record<string, any>)[activeCategory].tests.map((test: any) => (
             <div key={test.key} className="bg-white/[0.02] border border-white/[0.06] rounded-lg overflow-hidden">
               <div className="px-4 py-2.5 border-b border-white/[0.06]">
                 <p className="text-[12px] font-semibold text-white">{test.name}</p>

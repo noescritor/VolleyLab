@@ -1,30 +1,30 @@
-import React, { useState, createContext, useContext, useEffect, useRef } from 'react';
+import React, { useState, createContext, useContext, useEffect, useRef, Suspense, lazy } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './components/ui/dialog';
 import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
-import { Dashboard } from './components/Dashboard';
-import { PlayerManagement } from './components/PlayerManagement';
-import { PhysicalTesting } from './components/PhysicalTesting';
-import { MatchAnalytics } from './components/MatchAnalytics';
-import { MatchCenter } from './components/MatchCenter';
-import LiveMatchCenter from './components/live-match/LiveMatchCenter';
-import { LoadManagement } from './components/LoadManagement';
-import { PerformanceReports } from './components/PerformanceReports';
-import { TrainingPlan } from './components/TrainingPlan';
-import { TestPage } from './components/TestPage';
-import { AnalyticsDashboard } from './components/analytics/AnalyticsDashboard';
 import { AppProvider, setNavigationCallback } from './utils/AppContext';
 import {
   Activity, Users, TestTube, BarChart3, TrendingUp, FileText,
-  Settings, Zap, Brain, Edit3, Save, X, Upload, Link, Trash2,
+  Zap, Brain, Edit3, Save, Upload, Link, Trash2,
   Camera, Loader2, LogOut, ChevronLeft, ChevronRight, Menu, Moon, Sun, Calendar
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useUserProfile } from './utils/useUserProfile';
 import { Toaster } from './components/ui/sonner';
 import { ClubSelector } from './components/ClubSelector';
 import { supabase } from './utils/supabase/globalClient';
 import { VolleyLabLogo } from './components/VolleyLabLogo';
+
+const Dashboard          = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
+const PlayerManagement   = lazy(() => import('./components/PlayerManagement').then(m => ({ default: m.PlayerManagement })));
+const PhysicalTesting    = lazy(() => import('./components/PhysicalTesting').then(m => ({ default: m.PhysicalTesting })));
+const MatchAnalytics     = lazy(() => import('./components/MatchAnalytics').then(m => ({ default: m.MatchAnalytics })));
+const LiveMatchCenter    = lazy(() => import('./components/live-match/LiveMatchCenter'));
+const LoadManagement     = lazy(() => import('./components/LoadManagement').then(m => ({ default: m.LoadManagement })));
+const PerformanceReports = lazy(() => import('./components/PerformanceReports').then(m => ({ default: m.PerformanceReports })));
+const TrainingPlan       = lazy(() => import('./components/TrainingPlan').then(m => ({ default: m.TrainingPlan })));
+const TestPage           = lazy(() => import('./components/TestPage').then(m => ({ default: m.TestPage })));
+const AnalyticsDashboard = lazy(() => import('./components/analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
 
 // ─── Navigation context ───────────────────────────────────────────────────────
 interface NavigationContextType { setActiveTab: (tab: string) => void; }
@@ -223,7 +223,7 @@ function AppContent() {
   const [isSaving, setIsSaving]         = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
-  useEffect(() => { setNavigationCallback(setActiveTab); }, []);
+  useEffect(() => { setNavigationCallback((tab: string) => setActiveTab(tab as TabValue)); }, []);
 
   useEffect(() => {
     setTempName(userProfile.name);
@@ -344,7 +344,7 @@ function AppContent() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <NavigationContext.Provider value={{ setActiveTab }}>
+    <NavigationContext.Provider value={{ setActiveTab: (tab: string) => setActiveTab(tab as TabValue) }}>
       <div className="h-screen flex bg-[#080808] overflow-hidden">
 
         {/* ── Desktop Sidebar ──────────────────────────────────────────────── */}
@@ -389,16 +389,25 @@ function AppContent() {
 
           {/* Content */}
           <main className="flex-1 overflow-y-auto min-h-0">
-            {activeTab === 'dashboard'    && <Dashboard />}
-            {activeTab === 'players'      && <PlayerManagement />}
-            {activeTab === 'physical'     && <PhysicalTesting />}
-            {activeTab === 'match'        && <MatchAnalytics />}
-            {activeTab === 'analytics'    && <AnalyticsDashboard />}
-            {activeTab === 'match-center' && <LiveMatchCenter />}
-            {activeTab === 'load'         && <LoadManagement />}
-            {activeTab === 'reports'      && <PerformanceReports />}
-            {activeTab === 'training'     && <TrainingPlan />}
-            {activeTab === 'test'         && <TestPage />}
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center py-20 gap-3">
+                  <Loader2 size={18} className="animate-spin text-[#A191FF]" />
+                  <span className="text-[13px] text-white/40">Cargando módulo…</span>
+                </div>
+              }
+            >
+              {activeTab === 'dashboard'    && <Dashboard />}
+              {activeTab === 'players'      && <PlayerManagement />}
+              {activeTab === 'physical'     && <PhysicalTesting />}
+              {activeTab === 'match'        && <MatchAnalytics />}
+              {activeTab === 'analytics'    && <AnalyticsDashboard />}
+              {activeTab === 'match-center' && <LiveMatchCenter />}
+              {activeTab === 'load'         && <LoadManagement />}
+              {activeTab === 'reports'      && <PerformanceReports />}
+              {activeTab === 'training'     && <TrainingPlan />}
+              {activeTab === 'test'         && <TestPage />}
+            </Suspense>
           </main>
         </div>
 

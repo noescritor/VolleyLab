@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
 import { Plus, Search, Edit, Activity, Trash2, Loader2 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useApp } from '../utils/AppContext';
 import { SampleDataInfo } from './SampleDataInfo';
 import { PlayerProfileDashboard } from './player-profile/PlayerProfileDashboard';

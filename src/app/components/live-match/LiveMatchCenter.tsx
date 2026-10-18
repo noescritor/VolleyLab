@@ -349,7 +349,7 @@ function LiveAnalytics({ rallies, players, onClose, currentRallyActions }: any) 
     }
   });
   
-  let bestRotationPlayerId = null;
+  let bestRotationPlayerId: string | null = null;
   let bestRotationDiff = -999;
   Object.keys(rotationStats).forEach(p1 => {
     const diff = rotationStats[p1].win - rotationStats[p1].lose;

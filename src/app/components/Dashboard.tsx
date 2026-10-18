@@ -32,8 +32,8 @@ export function Dashboard() {
   
   safeMatches.forEach(m => {
     if (m.rallies) {
-      m.rallies.forEach(r => {
-         const hasOurServe = r.actions?.some(a => a.gesture?.toLowerCase() === 'saque' && a.playerId);
+      m.rallies.forEach((r: any) => {
+         const hasOurServe = r.actions?.some((a: any) => a.gesture?.toLowerCase() === 'saque' && a.playerId);
          if (!hasOurServe) {
            sideOutChances++;
            if (r.winner === 'our') sideOutSuccess++;

@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { apiService } from './api';
 import { supabaseService } from './supabaseService';
-import { initializeSupabaseData } from './initializeSupabaseData';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 // Navigation callback for tab switching
 let navigationCallback: ((tab: string) => void) | null = null;
@@ -16,10 +14,17 @@ interface Player {
   id: string;
   name: string;
   position: string;
+  number?: number;
   age?: number;
   height?: number;
   weight?: number;
   reach?: number;
+  wingspan?: number;
+  reachStatic?: number;
+  reachBlock?: number;
+  reachAttack?: number;
+  dominantHand?: string;
+  status?: string;
   experience?: string;
   createdAt: string;
   updatedAt: string;
@@ -34,7 +39,7 @@ interface Match {
   matchType: string;
   notes?: string;
   result?: 'W' | 'L' | null;
-  score?: string;
+  score?: string | null;
   sideOut?: number;
   transition?: number;
   players: any[];
@@ -47,12 +52,29 @@ interface Match {
 interface PhysicalTest {
   id: string;
   playerId: string;
-  testType: string;
-  value: number;
+  testType?: string;
+  value?: number;
   date: string;
   notes?: string;
+  CMJ?: number;
+  SJ?: number;
+  abordaje?: number;
+  vel5m?: number;
+  vel10m?: number;
+  tTest?: number;
+  spikeSpeed?: number;
+  serveSpeed?: number;
+  reactionTime?: number;
+  shoulderROM?: number;
+  ankleROM?: number;
+  benchPress?: number;
+  squat?: number;
+  deadlift?: number;
+  cooperTest?: number;
+  sitAndReach?: number;
   createdAt: string;
   updatedAt: string;
+  [key: string]: any;
 }
 
 interface AppState {
@@ -181,8 +203,8 @@ interface AppContextType {
   deleteMatch: (matchId: string) => Promise<void>;
   // Physical test actions
   loadPhysicalTests: () => Promise<void>;
-  createPhysicalTest: (testData: Omit<PhysicalTest, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updatePhysicalTest: (testId: string, testData: Partial<PhysicalTest>) => Promise<void>;
+  createPhysicalTest: (testData: any) => Promise<void>;
+  updatePhysicalTest: (testId: string, testData: any) => Promise<void>;
   deletePhysicalTest: (testId: string) => Promise<void>;
   // Supabase actions
   initializeSupabase: () => Promise<void>;
@@ -296,20 +318,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Player actions - Hybrid approach (Supabase primary, API fallback)
+  // Player actions
   const loadPlayers = async (useSupabase?: boolean) => {
     const fromSupabase = useSupabase !== undefined ? useSupabase : state.supabaseInitialized;
     dispatch({ type: 'SET_LOADING', entity: 'players', loading: true });
     try {
       if (fromSupabase) {
-        // Load from Supabase
         const supabasePlayers = await supabaseService.getPlayers();
         const legacyPlayers = supabasePlayers.map(convertSupabasePlayerToLegacy);
         dispatch({ type: 'SET_PLAYERS', players: legacyPlayers });
       } else {
-        // Fallback to API
-        const players = await apiService.getPlayers();
-        dispatch({ type: 'SET_PLAYERS', players });
+        dispatch({ type: 'SET_PLAYERS', players: [] });
       }
       dispatch({ type: 'SET_ERROR', error: null });
     } catch (error) {
@@ -323,29 +342,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const createPlayer = async (playerData: Omit<Player, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      if (state.supabaseInitialized) {
-        // Create in Supabase (Ghost Profile)
-        const ghostPlayer = await supabaseService.createGhostPlayer(
-          {
-            name: playerData.name,
-            height_cm: playerData.height,
-            weight_kg: playerData.weight,
-          },
-          {
-            position: playerData.position,
-            sport_metadata: {
-              reachAttack: playerData.reach
-            }
+      const ghostPlayer = await supabaseService.createGhostPlayer(
+        {
+          name: playerData.name,
+          height_cm: playerData.height,
+          weight_kg: playerData.weight,
+        },
+        {
+          position: playerData.position,
+          sport_metadata: {
+            reachAttack: playerData.reach
           }
-        );
-        
-        const newPlayer = convertSupabasePlayerToLegacy(ghostPlayer);
-        dispatch({ type: 'ADD_PLAYER', player: newPlayer });
-      } else {
-        // Fallback to API
-        const newPlayer = await apiService.createPlayer(playerData);
-        dispatch({ type: 'ADD_PLAYER', player: newPlayer });
-      }
+        }
+      );
+      
+      const newPlayer = convertSupabasePlayerToLegacy(ghostPlayer);
+      dispatch({ type: 'ADD_PLAYER', player: newPlayer });
       toast.success('Jugador creado');
     } catch (error) {
       console.error('Error creating player:', error);
@@ -355,28 +367,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updatePlayer = async (playerId: string, playerData: Partial<Player>) => {
     try {
-      if (state.supabaseInitialized) {
-        // Update in Supabase
-        await supabaseService.updatePlayer(
-          playerId,
-          {
-            ...(playerData.name && { name: playerData.name }),
-            ...(playerData.height && { height_cm: playerData.height }),
-            ...(playerData.weight && { weight_kg: playerData.weight }),
-          },
-          {
-            ...(playerData.position && { position: playerData.position }),
-            ...(playerData.reach && { sport_metadata: { reachAttack: playerData.reach } })
-          }
-        );
-        
-        // Refresh players
-        await loadPlayers();
-      } else {
-        // Fallback
-        const updatedPlayer = await apiService.updatePlayer(playerId, playerData);
-        dispatch({ type: 'UPDATE_PLAYER', player: updatedPlayer });
-      }
+      await supabaseService.updatePlayer(
+        playerId,
+        {
+          ...(playerData.name && { name: playerData.name }),
+          ...(playerData.height && { height_cm: playerData.height }),
+          ...(playerData.weight && { weight_kg: playerData.weight }),
+        },
+        {
+          ...(playerData.position && { position: playerData.position }),
+          ...(playerData.reach && { sport_metadata: { reachAttack: playerData.reach } })
+        }
+      );
+      
+      await loadPlayers();
       toast.success('Jugador actualizado');
     } catch (error) {
       console.error('Error updating player:', error);
@@ -386,15 +390,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deletePlayer = async (playerId: string) => {
     try {
-      if (state.supabaseInitialized) {
-        // Soft delete (transfer out) from club roster
-        await supabaseService.removePlayerFromRoster(playerId);
-        dispatch({ type: 'DELETE_PLAYER', playerId });
-      } else {
-        // Fallback
-        await apiService.deletePlayer(playerId);
-        dispatch({ type: 'DELETE_PLAYER', playerId });
-      }
+      await supabaseService.removePlayerFromRoster(playerId);
+      dispatch({ type: 'DELETE_PLAYER', playerId });
       toast.success('Jugador eliminado del equipo');
     } catch (error) {
       console.error('Error deleting player:', error);
@@ -412,8 +409,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const legacyMatches = supabaseMatches.map(convertSupabaseMatchToLegacy);
         dispatch({ type: 'SET_MATCHES', matches: legacyMatches });
       } else {
-        const matches = await apiService.getMatches();
-        dispatch({ type: 'SET_MATCHES', matches });
+        dispatch({ type: 'SET_MATCHES', matches: [] });
       }
       dispatch({ type: 'SET_ERROR', error: null });
     } catch (error) {
@@ -427,32 +423,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const createMatch = async (matchData: Omit<Match, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      if (state.supabaseInitialized) {
-        // Need to get the team id, default to first team found for this user's org
-        const teams = await supabaseService.getTeams();
-        if (teams.length === 0) throw new Error('Crea un equipo primero antes de registrar un partido');
-        
-        const supabaseMatch = await supabaseService.createMatch({
-          team_id: teams[0].id,
-          sport_type: 'volleyball',
-          opponent_name: matchData.opponent,
-          date: matchData.date,
-          competition_type: matchData.matchType,
-          location: matchData.venue,
-          match_metadata: {
-            notes: matchData.notes,
-            result: matchData.result,
-            score: matchData.score,
-            rallies: (matchData as any).rallies || [],
-            timeline: (matchData as any).timeline || []
-          }
-        });
-        
-        dispatch({ type: 'ADD_MATCH', match: convertSupabaseMatchToLegacy(supabaseMatch) });
-      } else {
-        const match = await apiService.createMatch(matchData);
-        dispatch({ type: 'ADD_MATCH', match });
-      }
+      const teams = await supabaseService.getTeams();
+      if (teams.length === 0) throw new Error('Crea un equipo primero antes de registrar un partido');
+      
+      const supabaseMatch = await supabaseService.createMatch({
+        team_id: teams[0].id,
+        sport_type: 'volleyball',
+        opponent_name: matchData.opponent,
+        date: matchData.date,
+        competition_type: matchData.matchType,
+        location: matchData.venue,
+        match_metadata: {
+          notes: matchData.notes,
+          result: matchData.result,
+          score: matchData.score,
+          rallies: (matchData as any).rallies || [],
+          timeline: (matchData as any).timeline || []
+        }
+      });
+      
+      dispatch({ type: 'ADD_MATCH', match: convertSupabaseMatchToLegacy(supabaseMatch) });
       toast.success('Partido creado exitosamente');
     } catch (error) {
       console.error('Error creating match:', error);
@@ -463,28 +453,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateMatch = async (matchId: string, matchData: Partial<Match>) => {
     try {
-      if (state.supabaseInitialized) {
-        const teams = await supabaseService.getTeams();
-        if (teams.length === 0) throw new Error('Crea un equipo primero antes de actualizar un partido');
-        
-        const supabaseMatch = await supabaseService.updateMatch(matchId, {
-          team_id: teams[0].id,
-          opponent_name: matchData.opponent,
-          date: matchData.date,
-          competition_type: matchData.matchType,
-          location: matchData.venue,
-          match_metadata: {
-            notes: matchData.notes,
-            result: matchData.result,
-            score: matchData.score
-          }
-        });
-        
-        dispatch({ type: 'UPDATE_MATCH', match: convertSupabaseMatchToLegacy(supabaseMatch) });
-      } else {
-        const match = await apiService.updateMatch(matchId, matchData);
-        dispatch({ type: 'UPDATE_MATCH', match });
-      }
+      const teams = await supabaseService.getTeams();
+      if (teams.length === 0) throw new Error('Crea un equipo primero antes de actualizar un partido');
+      
+      const supabaseMatch = await supabaseService.updateMatch(matchId, {
+        team_id: teams[0].id,
+        opponent_name: matchData.opponent,
+        date: matchData.date,
+        competition_type: matchData.matchType,
+        location: matchData.venue,
+        match_metadata: {
+          notes: matchData.notes,
+          result: matchData.result,
+          score: matchData.score
+        }
+      });
+      
+      dispatch({ type: 'UPDATE_MATCH', match: convertSupabaseMatchToLegacy(supabaseMatch) });
       toast.success('Partido actualizado exitosamente');
     } catch (error) {
       console.error('Error updating match:', error);
@@ -494,13 +479,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteMatch = async (matchId: string) => {
     try {
-      if (state.supabaseInitialized) {
-        await supabaseService.deleteMatch(matchId);
-        dispatch({ type: 'DELETE_MATCH', matchId });
-      } else {
-        await apiService.deleteMatch(matchId);
-        dispatch({ type: 'DELETE_MATCH', matchId });
-      }
+      await supabaseService.deleteMatch(matchId);
+      dispatch({ type: 'DELETE_MATCH', matchId });
       toast.success('Partido eliminado exitosamente');
     } catch (error) {
       console.error('Error deleting match:', error);
@@ -508,7 +488,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Physical test actions - Hybrid approach
+  // Physical test actions
   const loadPhysicalTests = async (useSupabase?: boolean) => {
     const fromSupabase = useSupabase !== undefined ? useSupabase : state.supabaseInitialized;
     dispatch({ type: 'SET_LOADING', entity: 'physicalTests', loading: true });
@@ -518,8 +498,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const legacyTests = supabaseTests.map(convertSupabaseTestToLegacy);
         dispatch({ type: 'SET_PHYSICAL_TESTS', tests: legacyTests });
       } else {
-        const tests = await apiService.getPhysicalTests();
-        dispatch({ type: 'SET_PHYSICAL_TESTS', tests });
+        dispatch({ type: 'SET_PHYSICAL_TESTS', tests: [] });
       }
       dispatch({ type: 'SET_ERROR', error: null });
     } catch (error) {
@@ -533,34 +512,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const createPhysicalTest = async (formData: any) => {
     try {
-      if (state.supabaseInitialized) {
-        const row = await supabaseService.createPhysicalTest(formData);
-        // Mapear la fila de Supabase al formato del estado local
-        const legacyTest = {
-          id:           row.id,
-          playerId:     row.player_id,
-          date:         row.date,
-          notes:        row.notes,
-          // métricas
-          CMJ:          row.cmj,
-          SJ:           row.sj,
-          abordaje:     row.abordaje,
-          vel5m:        row.vel_5m,
-          vel10m:       row.vel_10m,
-          tTest:        row.t_test,
-          spikeSpeed:   row.spike_speed,
-          serveSpeed:   row.serve_speed,
-          reactionTime: row.reaction_time,
-          shoulderROM:  row.shoulder_rom,
-          ankleROM:     row.ankle_rom,
-          createdAt:    row.created_at,
-          updatedAt:    row.updated_at,
-        };
-        dispatch({ type: 'ADD_PHYSICAL_TEST', test: legacyTest });
-      } else {
-        const test = await apiService.createPhysicalTest(formData);
-        dispatch({ type: 'ADD_PHYSICAL_TEST', test });
-      }
+      const row = await supabaseService.createPhysicalTest(formData);
+      const legacyTest = convertSupabaseTestToLegacy(row);
+      dispatch({ type: 'ADD_PHYSICAL_TEST', test: legacyTest });
       toast.success('Test físico registrado');
     } catch (error: any) {
       console.error('Error creating physical test:', error);
@@ -570,32 +524,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updatePhysicalTest = async (testId: string, formData: any) => {
     try {
-      if (state.supabaseInitialized) {
-        const row = await supabaseService.updatePhysicalTest(testId, formData);
-        const legacyTest = {
-          id:           row.id,
-          playerId:     row.player_id,
-          date:         row.date,
-          notes:        row.notes,
-          CMJ:          row.cmj,
-          SJ:           row.sj,
-          abordaje:     row.abordaje,
-          vel5m:        row.vel_5m,
-          vel10m:       row.vel_10m,
-          tTest:        row.t_test,
-          spikeSpeed:   row.spike_speed,
-          serveSpeed:   row.serve_speed,
-          reactionTime: row.reaction_time,
-          shoulderROM:  row.shoulder_rom,
-          ankleROM:     row.ankle_rom,
-          createdAt:    row.created_at,
-          updatedAt:    row.updated_at,
-        };
-        dispatch({ type: 'UPDATE_PHYSICAL_TEST', test: legacyTest });
-      } else {
-        const test = await apiService.updatePhysicalTest(testId, formData);
-        dispatch({ type: 'UPDATE_PHYSICAL_TEST', test });
-      }
+      const row = await supabaseService.updatePhysicalTest(testId, formData);
+      const legacyTest = convertSupabaseTestToLegacy(row);
+      dispatch({ type: 'UPDATE_PHYSICAL_TEST', test: legacyTest });
       toast.success('Test físico actualizado');
     } catch (error: any) {
       console.error('Error updating physical test:', error);
@@ -605,13 +536,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deletePhysicalTest = async (testId: string) => {
     try {
-      if (state.supabaseInitialized) {
-        await supabaseService.deletePhysicalTest(testId);
-        dispatch({ type: 'DELETE_PHYSICAL_TEST', testId });
-      } else {
-        await apiService.deletePhysicalTest(testId);
-        dispatch({ type: 'DELETE_PHYSICAL_TEST', testId });
-      }
+      await supabaseService.deletePhysicalTest(testId);
+      dispatch({ type: 'DELETE_PHYSICAL_TEST', testId });
       toast.success('Test físico eliminado exitosamente');
     } catch (error) {
       console.error('Error deleting physical test:', error);
@@ -622,15 +548,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Initialize on mount
   useEffect(() => {
     const initialize = async () => {
-      // First initialize Supabase and determine if it's available
       await initializeSupabase();
 
-      // Determine if user is authenticated with Supabase
       const user = await supabaseService.getCurrentUser();
       const orgId = user ? await supabaseService.getUserOrg() : null;
       const hasSupabase = !!user && !!orgId;
 
-      // Load data passing the flag explicitly — avoid reading stale state
       await Promise.all([
         loadPlayers(hasSupabase),
         loadMatches(hasSupabase),
@@ -639,48 +562,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     initialize();
-  }, []); // Fixed: Empty dependency array to avoid infinite loops
+  }, []);
 
   // Clear all data from both Supabase and local state
   const clearAllData = async () => {
     try {
-      console.log('🗑️ Starting database cleanup...');
-      
       if (state.supabaseInitialized) {
-        // Clear Supabase data using the dedicated service method
-        console.log('🔥 Clearing Supabase data...');
         await supabaseService.clearAllData();
-        console.log('✅ Supabase data cleared successfully');
-      } else {
-        // Clear API data
-        console.log('🔥 Clearing API data...');
-        
-        // Delete all entities via API service
-        const allPlayers = await apiService.getPlayers();
-        for (const player of allPlayers) {
-          await apiService.deletePlayer(player.id);
-        }
-        
-        const allMatches = await apiService.getMatches();
-        for (const match of allMatches) {
-          await apiService.deleteMatch(match.id);
-        }
-        
-        const allTests = await apiService.getPhysicalTests();
-        for (const test of allTests) {
-          await apiService.deletePhysicalTest(test.id);
-        }
-        
-        console.log('✅ API data cleared successfully');
       }
       
-      // Clear local state
       dispatch({ type: 'SET_PLAYERS', players: [] });
       dispatch({ type: 'SET_MATCHES', matches: [] });
       dispatch({ type: 'SET_PHYSICAL_TESTS', tests: [] });
       dispatch({ type: 'SET_ERROR', error: null });
       
-      console.log('🎉 All data cleared successfully!');
       toast.success('¡Base de datos limpiada exitosamente! Todos los datos han sido eliminados.');
       
     } catch (error) {

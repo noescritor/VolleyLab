@@ -217,20 +217,3 @@ export interface LiveUIState {
   last_action_time?: string;
   undo_available: boolean;
 }
-
-export default {
-  ActionEvent,
-  Rally,
-  Substitution,
-  Timeout,
-  LiveMatchState,
-  Player,
-  CourtZone,
-  QueuedAction,
-  ActionResponse,
-  RallyResponse,
-  LiveInsight,
-  PlayerPerformance,
-  GestureEvent,
-  LiveUIState
-};

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Wifi, WifiOff, Upload, CheckCircle } from 'lucide-react';
 
 interface QueuedAction {

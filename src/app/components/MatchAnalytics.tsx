@@ -5,7 +5,7 @@ import { PrintableMatchReport } from './analytics/PrintableMatchReport';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, ReferenceLine } from 'recharts';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { useApp } from '../utils/AppContext';
 import { AdvancedHeatmapDashboard } from './AdvancedHeatmapDashboard';
 

@@ -152,5 +152,3 @@ export interface DrillResult {
   unit: string;
   created_at: string;
 }
-
-export * from './match-types-utils';
