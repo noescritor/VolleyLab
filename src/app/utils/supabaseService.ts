@@ -198,20 +198,6 @@ class SupabaseService {
     const orgId = await this.getUserOrg();
     if (!orgId) throw new Error('No org context');
 
-    // 1. Create Ghost Profile
-    const { data: ghostPlayer, error: gpError } = await this.supabase
-      .from('global_players')
-      .insert({
-        name: playerData.name,
-        height_cm: playerData.height_cm,
-        weight_kg: playerData.weight_kg,
-        global_athlete_id: `VLL-GHOST-${Math.floor(Math.random()*10000)}` // Temporary ghost ID
-      })
-      .select()
-      .single();
-
-    if (gpError || !ghostPlayer) throw gpError;
-
     // Fetch default team if not provided
     let teamId = rosterData.team_id;
     if (!teamId) {
@@ -219,22 +205,23 @@ class SupabaseService {
       if (teams.length > 0) teamId = teams[0].id;
     }
 
-    // 2. Add to Roster
-    const { data: roster, error: rosterError } = await this.supabase
-      .from('club_roster')
-      .insert({
-        org_id: orgId,
-        team_id: teamId,
-        player_id: ghostPlayer.id,
-        status: 'active',
-        ...rosterData
-      })
-      .select()
-      .single();
+    const athleteId = `VLL-GHOST-${crypto.randomUUID()}`;
 
-    if (rosterError) throw rosterError;
+    const { data, error } = await this.supabase
+      .rpc('create_ghost_player', {
+        p_org_id: orgId,
+        p_name: playerData.name,
+        p_height_cm: playerData.height_cm ?? null,
+        p_weight_kg: playerData.weight_kg ?? null,
+        p_global_athlete_id: athleteId,
+        p_team_id: teamId || null,
+        p_number: rosterData.number ? String(rosterData.number) : null,
+        p_position: rosterData.position || null,
+        p_sport_metadata: rosterData.sport_metadata || {}
+      });
 
-    return { ...ghostPlayer, roster_id: roster.id, ...rosterData };
+    if (error) throw error;
+    return data;
   }
 
   async updatePlayer(playerId: string, playerData: any, rosterData: any) {
