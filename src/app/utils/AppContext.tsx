@@ -45,6 +45,8 @@ interface Match {
   players: any[];
   rallies?: any[];
   timeline?: any[];
+  schemaVersion?: number;
+  captureMode?: 'rapido' | 'completo';
   createdAt: string;
   updatedAt: string;
 }
@@ -267,6 +269,8 @@ function convertSupabaseMatchToLegacy(sm: any): Match {
     score: sm.match_metadata?.score,
     rallies: sm.match_metadata?.rallies || [],
     timeline: sm.match_metadata?.timeline || [],
+    schemaVersion: sm.match_metadata?.schemaVersion || 1,
+    captureMode: sm.match_metadata?.captureMode || 'rapido',
     players: [],
     createdAt: sm.created_at,
     updatedAt: sm.created_at
@@ -434,6 +438,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         competition_type: matchData.matchType,
         location: matchData.venue,
         match_metadata: {
+          schemaVersion: (matchData as any).schemaVersion || 2,
+          captureMode: (matchData as any).captureMode || 'rapido',
           notes: matchData.notes,
           result: matchData.result,
           score: matchData.score,
@@ -467,6 +473,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         competition_type: matchData.matchType,
         location: matchData.venue,
         match_metadata: {
+          schemaVersion: (matchData as any).schemaVersion || existingMatch?.schemaVersion || 2,
+          captureMode: (matchData as any).captureMode || existingMatch?.captureMode || 'rapido',
           notes: matchData.notes !== undefined ? matchData.notes : existingMatch?.notes,
           result: matchData.result !== undefined ? matchData.result : existingMatch?.result,
           score: matchData.score !== undefined ? matchData.score : existingMatch?.score,

@@ -1,6 +1,16 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Volleyball } from "lucide-react";
+import { Volleyball, AlertTriangle, X } from "lucide-react";
 import { useApp } from "../../utils/AppContext";
+import {
+  Quality,
+  Gesture,
+  rallyOutcomeFromAction,
+  computeRotation,
+  computeActionPhase,
+  QUALITY_LABELS,
+  RallyAction,
+  Rotation
+} from "../../utils/rallyModel";
 
 /* ═══════════════════════════════════════════
    BRAND TOKENS — VolleyLab
@@ -55,10 +65,12 @@ const GESTURES = [
   { id:"defensa",   label:"Defensa",   icon:"feather" },
 ];
 
-const RESULTS = [
-  { key:"pos", sym:"+", label:"Positivo", bd:C.gn,  bg:C.gnBg, tx:C.gnLt, sub:"Gana el punto" },
-  { key:"neu", sym:"•", label:"Neutral",  bd:C.gyDk,bg:C.gyBg, tx:C.gyLt, sub:"El rally sigue" },
-  { key:"neg", sym:"−", label:"Negativo", bd:C.rd,  bg:C.rdBg, tx:C.rdLt, sub:"Pierde el punto" },
+const QUALITIES: { key: Quality; sym: string; bd: string; bg: string; tx: string; subDefault: string }[] = [
+  { key: '#', sym: '#', bd: C.gn,   bg: C.gnBg, tx: C.gnLt, subDefault: 'Punto directo / Perfecto' },
+  { key: '+', sym: '+', bd: C.vt,   bg: C.vtBg, tx: C.vtLt, subDefault: 'Positivo / Bueno' },
+  { key: '!', sym: '!', bd: C.gyBd, bg: C.gyBg, tx: C.gyLt, subDefault: 'Neutro / Continuidad' },
+  { key: '-', sym: '-', bd: '#FFD391', bg: 'rgba(255,211,145,0.1)', tx: '#FFD391', subDefault: 'Negativo / Malo' },
+  { key: '=', sym: '=', bd: C.rd,   bg: C.rdBg, tx: C.rdLt, subDefault: 'Error / Punto rival' },
 ];
 
 /* ═══════════════════════════════════════════
@@ -665,46 +677,72 @@ export default function LiveMatchCenter() {
     setScreen("live");
   };
 
-  /* ── 3. RALLY LOGIC (Neutral, Pos, Neg) ── */
-  const regResult = (key: string) => {
+  /* ── 3. RALLY LOGIC (5-level Quality: #, +, !, -, =) ── */
+  const regResult = (key: Quality) => {
     if (!selP) return;
 
-    const action = {
+    const action: RallyAction = {
+      id: crypto.randomUUID(),
+      ts: Date.now(),
+      team: 'our',
       playerId: selP,
-      gesture: activeG,
-      quality: key, // 'pos', 'neu', 'neg'
-      timestamp: Date.now()
+      gesture: activeG as Gesture,
+      quality: key,
+      phase: computeActionPhase(
+        getCurrentServingTeam(currentRallyActions) === 'rival' ? 'K1' : 'K2',
+        currentRallyActions
+      )
     };
 
-    if (key === "neu") {
-      // Neutral: Agrega a la lista pero NO cierra el punto
+    const outcome = rallyOutcomeFromAction(action);
+
+    if (!outcome.isClosed) {
+      // Punto sigue
       pushH();
       setCurrentRallyActions(prev => [...prev, action]);
-      setMsg(`Neutral: ${gLabel} de ${getPlayerName(selP)}`);
-    } else if (key === "pos") {
-      // Positivo: Gana el punto, preguntamos DÓNDE
+      const label = QUALITY_LABELS[action.gesture]?.[key] || key;
+      setMsg(`${label} de ${getPlayerName(selP)}`);
+    } else if (outcome.winner === 'our') {
+      // Punto nuestro
       setPendingEndResult({ winner: 'our', action });
-    } else if (key === "neg") {
-      // Negativo: Pierde el punto, primero averiguamos por qué
+    } else if (outcome.winner === 'rival') {
+      // Error nuestro / Punto rival: abre modal de tipo de error
       setPendingError(action);
     }
   };
 
   const handleSelectErrorReason = (reason: string) => {
-    const actionWithError = { ...pendingError, errorDetail: reason };
+    const errorTypeMap: Record<string, string> = {
+      'Red': 'red',
+      'Fuera': 'fuera',
+      'Falta Técnica': 'falta_tecnica',
+      'Bloqueado': 'bloqueado',
+      'Invasión': 'invasion',
+      'Rotación': 'rotacion'
+    };
+    const actionWithError = {
+      ...pendingError,
+      detail: {
+        ...(pendingError.detail || {}),
+        errorType: errorTypeMap[reason] || 'falta_tecnica'
+      }
+    };
     setPendingError(null);
     
     // Si fue falta técnica, no necesitamos heatmap, terminamos el rally aquí.
-    if (reason === 'Falta Técnica') {
+    if (reason === 'Falta Técnica' || reason === 'Invasión' || reason === 'Rotación') {
       pushH();
       const finalActions = [...currentRallyActions, actionWithError];
       const servingTeam = getCurrentServingTeam(finalActions);
       const nextOurScore = ourScore;
       const nextRivalScore = rivalScore + 1;
       const newRally = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         winner: 'rival' as const,
         servingTeam,
+        rotation: computeRotation(lineup, players),
+        phase: servingTeam === 'rival' ? 'K1' : 'K2',
+        pointType: 'regalado_nuestro' as const,
         ourScore: nextOurScore,
         rivalScore: nextRivalScore,
         setNum,
@@ -716,7 +754,7 @@ export default function LiveMatchCenter() {
       setTimeline(prev => [...prev, { type: 'rally', data: newRally }]);
       setRivalScore(nextRivalScore);
       doFlash("rival");
-      setMsg(`Punto rival (Falta de ${getPlayerName(actionWithError.playerId)})`);
+      setMsg(`Punto rival (${reason} de ${getPlayerName(actionWithError.playerId)})`);
       setCurrentRallyActions([]);
     } else {
       // Para Red o Fuera, pedimos confirmación de posición o la saltamos
@@ -755,11 +793,21 @@ export default function LiveMatchCenter() {
     const nextOurScore = pendingEndResult.winner === 'our' ? ourScore + 1 : ourScore;
     const nextRivalScore = pendingEndResult.winner === 'rival' ? rivalScore + 1 : rivalScore;
 
+    let pointType: 'ganado' | 'regalado_rival' | 'perdido' | 'regalado_nuestro' = 'ganado';
+    if (pendingEndResult.winner === 'our') {
+      pointType = pendingEndResult.action?.team === 'rival' ? 'regalado_rival' : 'ganado';
+    } else {
+      pointType = pendingEndResult.action?.team === 'our' ? 'regalado_nuestro' : 'perdido';
+    }
+
     // Save rally globally
     const newRally = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       winner: pendingEndResult.winner,
       servingTeam,
+      rotation: computeRotation(lineup, players),
+      phase: servingTeam === 'rival' ? ('K1' as const) : ('K2' as const),
+      pointType,
       ourScore: nextOurScore,
       rivalScore: nextRivalScore,
       setNum,
@@ -1119,16 +1167,38 @@ export default function LiveMatchCenter() {
       {/* ERROR REASON MODAL */}
       {pendingError && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', padding: 20 }}>
-          <div style={{ width: 300, background: '#111116', border: `1px solid ${C.bd}`, borderRadius: 16, padding: 24, textAlign: 'center' }}>
-            <h3 style={{ color: C.w, fontSize: 18, fontWeight: 600, marginBottom: 8 }}>¿Qué sucedió?</h3>
-            <p style={{ color: C.t2, fontSize: 13, marginBottom: 20 }}>Especifica el tipo de error en el {pendingError.gesture}</p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button onClick={() => handleSelectErrorReason("Red")} style={{ padding: 14, borderRadius: 10, border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.05)", color: C.w, fontSize: 15, fontWeight: 500 }}>🥅 Error en la Red</button>
-              <button onClick={() => handleSelectErrorReason("Fuera")} style={{ padding: 14, borderRadius: 10, border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.05)", color: C.w, fontSize: 15, fontWeight: 500 }}>❌ Fuera / Out</button>
-              <button onClick={() => handleSelectErrorReason("Falta Técnica")} style={{ padding: 14, borderRadius: 10, border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.05)", color: C.w, fontSize: 15, fontWeight: 500 }}>⚠️ Falta Técnica (Doble, Rotación)</button>
+          <div style={{ width: 320, background: '#111116', border: `1px solid ${C.bd}`, borderRadius: 16, padding: 20, textAlign: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <h3 style={{ color: C.w, fontSize: 16, fontWeight: 600, margin: 0 }}>¿Qué sucedió?</h3>
+              <button onClick={() => setPendingError(null)} style={{ background: 'none', border: 'none', color: C.t2, cursor: 'pointer', padding: 4 }}>
+                <X size={18} />
+              </button>
             </div>
-            <button onClick={() => setPendingError(null)} style={{ marginTop: 24, fontSize: 13, color: C.t3, background: 'none', border: 'none' }}>Cancelar</button>
+            <p style={{ color: C.t2, fontSize: 12, marginBottom: 16, textAlign: 'left' }}>
+              Error en {pendingError.gesture} de {getPlayerName(pendingError.playerId)}
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button onClick={() => handleSelectErrorReason("Red")} style={{ minHeight: 44, padding: "10px 14px", borderRadius: 10, border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.04)", color: C.w, fontSize: 14, fontWeight: 500, textAlign: 'left' }}>
+                Error en la red
+              </button>
+              <button onClick={() => handleSelectErrorReason("Fuera")} style={{ minHeight: 44, padding: "10px 14px", borderRadius: 10, border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.04)", color: C.w, fontSize: 14, fontWeight: 500, textAlign: 'left' }}>
+                Fuera / Out
+              </button>
+              {(pendingError.gesture === 'ataque' || pendingError.gesture === 'dejada') && (
+                <button onClick={() => handleSelectErrorReason("Bloqueado")} style={{ minHeight: 44, padding: "10px 14px", borderRadius: 10, border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.04)", color: C.w, fontSize: 14, fontWeight: 500, textAlign: 'left' }}>
+                  Bloqueado por el rival
+                </button>
+              )}
+              <button onClick={() => handleSelectErrorReason("Invasión")} style={{ minHeight: 44, padding: "10px 14px", borderRadius: 10, border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.04)", color: C.w, fontSize: 14, fontWeight: 500, textAlign: 'left' }}>
+                Invasión de red o línea
+              </button>
+              <button onClick={() => handleSelectErrorReason("Falta Técnica")} style={{ minHeight: 44, padding: "10px 14px", borderRadius: 10, border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.04)", color: C.w, fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertTriangle size={15} color={C.rdLt} />
+                <span>Falta técnica (doble, 4 toques, rotación)</span>
+              </button>
+            </div>
+            <button onClick={() => setPendingError(null)} style={{ marginTop: 16, minHeight: 44, width: '100%', fontSize: 13, color: C.t3, background: 'none', border: 'none', cursor: 'pointer' }}>Cancelar</button>
           </div>
         </div>
       )}
@@ -1137,15 +1207,16 @@ export default function LiveMatchCenter() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.92)', padding: 20 }}>
           <div style={{ position: 'relative', width: 320 }}>
             {/* Header info */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div style={{ color: pendingEndResult.winner === 'our' ? C.gnLt : C.rdLt, fontWeight: 600, fontSize: 16 }}>
                 {pendingEndResult.winner === 'our' ? '¡PUNTO NUESTRO!' : 'PUNTO RIVAL'}
               </div>
               <button 
                 onClick={() => setPendingEndResult(null)} 
-                style={{ color: C.t2, fontSize: 12, background: 'transparent', border: 'none', padding: 0 }}
+                style={{ color: C.t2, fontSize: 12, background: 'transparent', border: 'none', padding: 4, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
               >
-                ✕ Cancelar
+                <X size={16} />
+                <span>Cancelar</span>
               </button>
             </div>
             
@@ -1168,8 +1239,8 @@ export default function LiveMatchCenter() {
             )}
 
             <button onClick={() => confirmEndOfRally(null, 'court', true)} style={{
-              width: "100%", marginTop: 20, padding: 14, borderRadius: 10,
-              border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.05)", color: C.t1, fontSize: 14, fontWeight: 500
+              width: "100%", marginTop: 20, minHeight: 44, padding: "12px 14px", borderRadius: 10,
+              border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.05)", color: C.t1, fontSize: 14, fontWeight: 500, cursor: 'pointer'
             }}>
               Saltar Mapa
             </button>
@@ -1300,31 +1371,51 @@ export default function LiveMatchCenter() {
             </div>
           </div>
 
-          {/* ── RESULT PANEL ── */}
+          {/* ── RESULT PANEL (5-LEVEL SCALE) ── */}
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontSize:10, color:C.t2, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>
               {selP ? `Calidad del ${gLabel}` : "Selecciona un jugador arriba"}
             </div>
 
-            {RESULTS.map(r => (
-              <button key={r.key} onClick={() => regResult(r.key)} disabled={!selP}
-                style={{
-                  width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "13px 14px", borderRadius: 10, marginBottom: 6,
-                  border: `1px solid ${selP ? r.bd : C.bd}`,
-                  background: selP ? r.bg : "rgba(255,255,255,0.02)",
-                  color: selP ? r.tx : C.t3,
-                  opacity: selP ? 1 : 0.38,
-                }}>
-                <span style={{ display:"flex", alignItems:"center", gap:10 }}>
-                  <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, width: 20, textAlign: "center", lineHeight: 1 }}>{r.sym}</span>
-                  <span style={{ textAlign: "left" }}>
-                    <span style={{ fontSize:14, fontWeight:600, display:"block" }}>{r.label}</span>
-                    <span style={{ fontSize:10, opacity:0.65 }}>{r.sub}</span>
+            {QUALITIES.map(q => {
+              const gestureLabel = selP ? QUALITY_LABELS[activeG as Gesture]?.[q.key] || q.subDefault : q.subDefault;
+              return (
+                <button
+                  key={q.key}
+                  onClick={() => regResult(q.key)}
+                  disabled={!selP}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 14px",
+                    minHeight: 46,
+                    borderRadius: 10,
+                    marginBottom: 6,
+                    border: `1px solid ${selP ? q.bd : C.bd}`,
+                    background: selP ? q.bg : "rgba(255,255,255,0.02)",
+                    color: selP ? q.tx : C.t3,
+                    opacity: selP ? 1 : 0.38,
+                    cursor: selP ? "pointer" : "not-allowed"
+                  }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 20, width: 22, textAlign: "center", lineHeight: 1, fontWeight: 700 }}>
+                      {q.sym}
+                    </span>
+                    <span style={{ textAlign: "left" }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, display: "block" }}>
+                        {gestureLabel}
+                      </span>
+                      <span style={{ fontSize: 10, opacity: 0.65 }}>
+                        {q.subDefault}
+                      </span>
+                    </span>
                   </span>
-                </span>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
 
           <div style={{ textAlign: "center", fontSize: 11, color: C.t3, minHeight: 16, letterSpacing: "0.02em", marginBottom: 20 }}>
