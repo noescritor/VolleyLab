@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Volleyball, AlertTriangle, X } from "lucide-react";
+import { Volleyball, AlertTriangle, X, ArrowLeft } from "lucide-react";
 import { useApp } from "../../utils/AppContext";
 import {
   Quality,
@@ -564,6 +564,22 @@ export default function LiveMatchCenter() {
   const [rivalTimeouts, setRivalTimeouts] = useState(0);
   const [rotationCount, setRotationCount] = useState<number>(0);
 
+  // Point menus for Punto Nuestro / Punto Rival
+  const [pointMenu, setPointMenu] = useState<'our' | 'rival' | null>(null);
+  const [pointSubStep, setPointSubStep] = useState<
+    'main' | 'rival_errors' | 'rival_points' | 'select_player' | 'select_gesture' | 'rival_number'
+  >('main');
+  const [tempPlayerId, setTempPlayerId] = useState<string | null>(null);
+  const [tempPointQuality, setTempPointQuality] = useState<Quality>('#');
+  const [tempRivalAction, setTempRivalAction] = useState<{
+    winner: 'our' | 'rival';
+    pointType: 'regalado_rival' | 'perdido';
+    gesture: Gesture;
+    quality: Quality;
+    detailType: string;
+  } | null>(null);
+  const [rivalNumberInput, setRivalNumberInput] = useState<string>('');
+
   // --- HYDRATION ---
   useEffect(() => {
     const saved = localStorage.getItem("volleyLab_liveMatch");
@@ -682,15 +698,20 @@ export default function LiveMatchCenter() {
   };
 
   /* ── 3. RALLY LOGIC (5-level Quality: #, +, !, -, =) ── */
-  const regResult = (key: Quality) => {
-    if (!selP) return;
+  const regResult = (key: Quality, overridePlayerId?: string, overrideGesture?: Gesture) => {
+    const targetPlayer = overridePlayerId || selP;
+    const targetGesture = (overrideGesture || activeG) as Gesture;
+    if (!targetPlayer) return;
+
+    if (overridePlayerId) setSelP(overridePlayerId);
+    if (overrideGesture) setActiveG(overrideGesture);
 
     const action: RallyAction = {
       id: crypto.randomUUID(),
       ts: Date.now(),
       team: 'our',
-      playerId: selP,
-      gesture: activeG as Gesture,
+      playerId: targetPlayer,
+      gesture: targetGesture,
       quality: key,
       phase: computeActionPhase(
         getCurrentServingTeam(currentRallyActions) === 'rival' ? 'K1' : 'K2',
@@ -705,7 +726,7 @@ export default function LiveMatchCenter() {
       pushH();
       setCurrentRallyActions(prev => [...prev, action]);
       const label = QUALITY_LABELS[action.gesture]?.[key] || key;
-      setMsg(`${label} de ${getPlayerName(selP)}`);
+      setMsg(`${label} de ${getPlayerName(targetPlayer)}`);
     } else if (outcome.winner === 'our') {
       // Punto nuestro
       setPendingEndResult({ winner: 'our', action });
@@ -744,7 +765,7 @@ export default function LiveMatchCenter() {
         id: crypto.randomUUID(),
         winner: 'rival' as const,
         servingTeam,
-        rotation: computeRotation(lineup, players),
+        rotation: computeRotation(lineup, players, rotationCount),
         phase: servingTeam === 'rival' ? 'K1' : 'K2',
         pointType: 'regalado_nuestro' as const,
         ourScore: nextOurScore,
@@ -766,8 +787,77 @@ export default function LiveMatchCenter() {
     }
   };
 
-  const quickScore = (side: 'our'|'rival') => {
-    setPendingEndResult({ winner: side });
+  const openPointMenu = (side: 'our' | 'rival') => {
+    setPointMenu(side);
+    setPointSubStep('main');
+    setTempPlayerId(null);
+    setTempRivalAction(null);
+    setRivalNumberInput('');
+  };
+
+  const finishRallyWithRivalAction = (rivalNum?: number | null) => {
+    if (!tempRivalAction) return;
+    const { winner, pointType, gesture, quality, detailType } = tempRivalAction;
+    pushH();
+    const servingTeam = getCurrentServingTeam(currentRallyActions);
+    const phase = servingTeam === 'rival' ? ('K1' as const) : ('K2' as const);
+    const actionPhase = computeActionPhase(phase, currentRallyActions);
+
+    const rivalAction: RallyAction = {
+      id: crypto.randomUUID(),
+      ts: Date.now(),
+      team: 'rival',
+      playerId: null,
+      rivalNumber: rivalNum || null,
+      gesture,
+      quality,
+      phase: actionPhase,
+      detail: {
+        errorType: detailType as any
+      }
+    };
+
+    const finalActions = [...currentRallyActions, rivalAction];
+    const nextOurScore = winner === 'our' ? ourScore + 1 : ourScore;
+    const nextRivalScore = winner === 'rival' ? rivalScore + 1 : rivalScore;
+
+    const newRally = {
+      id: crypto.randomUUID(),
+      winner,
+      servingTeam,
+      rotation: computeRotation(lineup, players, rotationCount),
+      phase,
+      pointType,
+      ourScore: nextOurScore,
+      rivalScore: nextRivalScore,
+      setNum,
+      actions: finalActions,
+      lineup: dc(lineup)
+    };
+
+    setAllRallies(prev => [...prev, newRally]);
+    setTimeline(prev => [...prev, { type: 'rally', data: newRally }]);
+
+    if (winner === 'our') {
+      setOurScore(nextOurScore);
+      doFlash('our');
+      if (servingTeam === 'rival') {
+        setLineup((l: any) => rotateLineup(l));
+        setRotationCount(c => c + 1);
+        setMsg('¡Side-out ganado! Rotación automática');
+      } else {
+        setMsg('¡Punto ganado!');
+      }
+    } else {
+      setRivalScore(nextRivalScore);
+      doFlash('rival');
+      setMsg('Punto rival.');
+    }
+
+    setCurrentRallyActions([]);
+    setPointMenu(null);
+    setPointSubStep('main');
+    setTempRivalAction(null);
   };
 
   const confirmEndOfRally = (impact: any, plane: 'court'|'net', skipHeatmap = false) => {
@@ -1255,6 +1345,336 @@ export default function LiveMatchCenter() {
         </div>
       )}
 
+      {/* ── POINT MENU MODAL (PUNTO NUESTRO / PUNTO RIVAL) ── */}
+      {pointMenu && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', padding: 16 }}>
+          <div style={{ width: 330, maxHeight: '90vh', overflowY: 'auto', background: '#111116', border: `1px solid ${C.bd}`, borderRadius: 16, padding: 20 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {pointSubStep !== 'main' && (
+                  <button
+                    onClick={() => {
+                      if (pointSubStep === 'select_gesture') setPointSubStep('select_player');
+                      else setPointSubStep('main');
+                    }}
+                    style={{ background: 'none', border: 'none', color: C.t2, cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+                )}
+                <h3 style={{ color: pointMenu === 'our' ? C.gnLt : C.rdLt, fontSize: 16, fontWeight: 700, margin: 0 }}>
+                  {pointMenu === 'our' ? 'Punto Nuestro (+1)' : 'Punto Rival (+1)'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setPointMenu(null)}
+                style={{ background: 'none', border: 'none', color: C.t2, cursor: 'pointer', padding: 4 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* STEP: MAIN MENU */}
+            {pointSubStep === 'main' && (
+              <div>
+                <p style={{ color: C.t2, fontSize: 12, marginBottom: 16 }}>
+                  {pointMenu === 'our' ? '¿Cómo se consiguió el punto?' : '¿Cómo se definió el punto?'}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {pointMenu === 'our' ? (
+                    <>
+                      <button
+                        onClick={() => setPointSubStep('rival_errors')}
+                        style={{
+                          minHeight: 48, padding: "12px 14px", borderRadius: 10,
+                          border: `1px solid ${C.vtBd}`, background: C.vtBg, color: C.vtLt,
+                          fontSize: 14, fontWeight: 600, textAlign: 'left', cursor: 'pointer',
+                          display: 'flex', flexDirection: 'column', gap: 2
+                        }}
+                      >
+                        <span>Error del Rival</span>
+                        <span style={{ fontSize: 11, opacity: 0.7, fontWeight: 400 }}>Saque fuera, red, ataque fuera, etc.</span>
+                      </button>
+                      <button
+                        onClick={() => { setTempPointQuality('#'); setPointSubStep('select_player'); }}
+                        style={{
+                          minHeight: 48, padding: "12px 14px", borderRadius: 10,
+                          border: `1px solid ${C.gn}`, background: C.gnBg, color: C.gnLt,
+                          fontSize: 14, fontWeight: 600, textAlign: 'left', cursor: 'pointer',
+                          display: 'flex', flexDirection: 'column', gap: 2
+                        }}
+                      >
+                        <span>Punto Ganado por Nosotros (#)</span>
+                        <span style={{ fontSize: 11, opacity: 0.7, fontWeight: 400 }}>Ace, ataque ganador, bloqueo, dejada</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setPointSubStep('rival_points')}
+                        style={{
+                          minHeight: 48, padding: "12px 14px", borderRadius: 10,
+                          border: `1px solid ${C.rd}`, background: C.rdBg, color: C.rdLt,
+                          fontSize: 14, fontWeight: 600, textAlign: 'left', cursor: 'pointer',
+                          display: 'flex', flexDirection: 'column', gap: 2
+                        }}
+                      >
+                        <span>Punto del Rival</span>
+                        <span style={{ fontSize: 11, opacity: 0.7, fontWeight: 400 }}>Ataque rival, ace rival, bloqueo rival</span>
+                      </button>
+                      <button
+                        onClick={() => { setTempPointQuality('='); setPointSubStep('select_player'); }}
+                        style={{
+                          minHeight: 48, padding: "12px 14px", borderRadius: 10,
+                          border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.04)", color: C.w,
+                          fontSize: 14, fontWeight: 600, textAlign: 'left', cursor: 'pointer',
+                          display: 'flex', flexDirection: 'column', gap: 2
+                        }}
+                      >
+                        <span>Error Nuestro (=)</span>
+                        <span style={{ fontSize: 11, opacity: 0.7, fontWeight: 400 }}>Red, fuera, invasión, falta técnica</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* STEP: RIVAL ERRORS LIST */}
+            {pointSubStep === 'rival_errors' && (
+              <div>
+                <p style={{ color: C.t2, fontSize: 12, marginBottom: 14 }}>
+                  Tipo de error del equipo rival:
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { label: 'Saque fuera', key: 'saque_fuera' },
+                    { label: 'Saque a la red', key: 'saque_red' },
+                    { label: 'Ataque fuera', key: 'ataque_fuera' },
+                    { label: 'Ataque a la red', key: 'ataque_red' },
+                    { label: 'Invasión / Red', key: 'invasion' },
+                    { label: 'Falta técnica', key: 'falta_tecnica' },
+                  ].map(errItem => (
+                    <button
+                      key={errItem.key}
+                      onClick={() => {
+                        setTempRivalAction({
+                          winner: 'our',
+                          pointType: 'regalado_rival',
+                          gesture: 'error_rival',
+                          quality: '=',
+                          detailType: errItem.key
+                        });
+                        setRivalNumberInput('');
+                        setPointSubStep('rival_number');
+                      }}
+                      style={{
+                        minHeight: 44, padding: "10px 14px", borderRadius: 10,
+                        border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.04)",
+                        color: C.w, fontSize: 14, fontWeight: 500, textAlign: 'left', cursor: 'pointer'
+                      }}
+                    >
+                      {errItem.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* STEP: RIVAL POINTS LIST */}
+            {pointSubStep === 'rival_points' && (
+              <div>
+                <p style={{ color: C.t2, fontSize: 12, marginBottom: 14 }}>
+                  Acción ganadora del rival:
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { label: 'Ataque rival', key: 'ataque_rival' },
+                    { label: 'Ace rival', key: 'ace_rival' },
+                    { label: 'Bloqueo rival', key: 'bloqueo_rival' },
+                    { label: 'Falta técnica / Otro', key: 'otro' },
+                  ].map(ptItem => (
+                    <button
+                      key={ptItem.key}
+                      onClick={() => {
+                        setTempRivalAction({
+                          winner: 'rival',
+                          pointType: 'perdido',
+                          gesture: 'punto_rival',
+                          quality: '#',
+                          detailType: ptItem.key
+                        });
+                        setRivalNumberInput('');
+                        setPointSubStep('rival_number');
+                      }}
+                      style={{
+                        minHeight: 44, padding: "10px 14px", borderRadius: 10,
+                        border: `1px solid ${C.bdMed}`, background: "rgba(255,255,255,0.04)",
+                        color: C.w, fontSize: 14, fontWeight: 500, textAlign: 'left', cursor: 'pointer'
+                      }}
+                    >
+                      {ptItem.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* STEP: RIVAL NUMBER (OPTIONAL KEYPAD) */}
+            {pointSubStep === 'rival_number' && (
+              <div>
+                <p style={{ color: C.t2, fontSize: 12, marginBottom: 8 }}>
+                  Número de camiseta rival (opcional):
+                </p>
+                <div style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${C.bd}`,
+                  borderRadius: 8,
+                  padding: "10px 14px",
+                  textAlign: 'center',
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: 24,
+                  fontWeight: 700,
+                  color: rivalNumberInput ? C.w : C.t3,
+                  marginBottom: 12
+                }}>
+                  {rivalNumberInput ? `#${rivalNumberInput}` : 'Sin número'}
+                </div>
+                
+                {/* Keypad */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 14 }}>
+                  {['1','2','3','4','5','6','7','8','9','C','0','⌫'].map(btn => (
+                    <button
+                      key={btn}
+                      onClick={() => {
+                        if (btn === 'C') setRivalNumberInput('');
+                        else if (btn === '⌫') setRivalNumberInput(prev => prev.slice(0, -1));
+                        else if (rivalNumberInput.length < 2) setRivalNumberInput(prev => prev + btn);
+                      }}
+                      style={{
+                        minHeight: 44,
+                        borderRadius: 8,
+                        border: `1px solid ${C.bd}`,
+                        background: 'rgba(255,255,255,0.03)',
+                        color: C.w,
+                        fontFamily: "'DM Mono', monospace",
+                        fontSize: 16,
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {btn}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <button
+                    onClick={() => finishRallyWithRivalAction(null)}
+                    style={{
+                      minHeight: 44, padding: "10px 8px", borderRadius: 10,
+                      border: `1px solid ${C.bdMed}`, background: 'rgba(255,255,255,0.05)',
+                      color: C.t1, fontSize: 13, fontWeight: 500, cursor: 'pointer'
+                    }}
+                  >
+                    Omitir
+                  </button>
+                  <button
+                    onClick={() => finishRallyWithRivalAction(rivalNumberInput ? parseInt(rivalNumberInput, 10) : null)}
+                    style={{
+                      minHeight: 44, padding: "10px 8px", borderRadius: 10,
+                      border: `1px solid ${pointMenu === 'our' ? C.gn : C.rd}`,
+                      background: pointMenu === 'our' ? C.gnBg : C.rdBg,
+                      color: pointMenu === 'our' ? C.gnLt : C.rdLt,
+                      fontSize: 13, fontWeight: 600, cursor: 'pointer'
+                    }}
+                  >
+                    {rivalNumberInput ? `Guardar #${rivalNumberInput}` : 'Confirmar'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP: SELECT PLAYER (OURS) */}
+            {pointSubStep === 'select_player' && (
+              <div>
+                <p style={{ color: C.t2, fontSize: 12, marginBottom: 12 }}>
+                  ¿Quién realizó la acción?
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {luNums(lineup).map(pId => {
+                    const pl = players.find(p => p.id === pId);
+                    return (
+                      <button
+                        key={pId}
+                        onClick={() => {
+                          setTempPlayerId(pId);
+                          setPointSubStep('select_gesture');
+                        }}
+                        style={{
+                          minHeight: 48, padding: "10px 12px", borderRadius: 10,
+                          border: `1px solid ${C.bdMed}`, background: 'rgba(255,255,255,0.04)',
+                          color: C.w, fontSize: 13, fontWeight: 600, textAlign: 'left', cursor: 'pointer'
+                        }}
+                      >
+                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: C.vtLt }}>#{pl?.number ?? '•'}</div>
+                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl ? shortName(pl.name) : '—'}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* STEP: SELECT GESTURE */}
+            {pointSubStep === 'select_gesture' && tempPlayerId && (
+              <div>
+                <p style={{ color: C.t2, fontSize: 12, marginBottom: 12 }}>
+                  Gesto de {getPlayerName(tempPlayerId)}:
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {(tempPointQuality === '#'
+                    ? [
+                        { id: 'ataque', label: 'Ataque Ganador' },
+                        { id: 'saque', label: 'Ace de Saque' },
+                        { id: 'bloqueo', label: 'Punto de Bloqueo' },
+                        { id: 'dejada', label: 'Dejada Ganadora' },
+                      ]
+                    : [
+                        { id: 'saque', label: 'Error de Saque' },
+                        { id: 'recepcion', label: 'Error de Recepción' },
+                        { id: 'armado', label: 'Error de Armado' },
+                        { id: 'ataque', label: 'Error de Ataque' },
+                        { id: 'dejada', label: 'Error de Dejada' },
+                        { id: 'bloqueo', label: 'Error / Invasión en Bloqueo' },
+                        { id: 'defensa', label: 'Error de Defensa' },
+                      ]
+                  ).map(g => (
+                    <button
+                      key={g.id}
+                      onClick={() => {
+                        const targetP = tempPlayerId;
+                        setPointMenu(null);
+                        setPointSubStep('main');
+                        regResult(tempPointQuality, targetP, g.id as Gesture);
+                      }}
+                      style={{
+                        minHeight: 44, padding: "10px 14px", borderRadius: 10,
+                        border: `1px solid ${C.bdMed}`, background: 'rgba(255,255,255,0.04)',
+                        color: C.w, fontSize: 14, fontWeight: 500, textAlign: 'left', cursor: 'pointer'
+                      }}
+                    >
+                      {g.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", justifyContent: "center" }}>
         <div style={{ width:"100%", maxWidth:375, padding:"16px 14px 28px", position:"relative" }}>
 
@@ -1339,21 +1759,23 @@ export default function LiveMatchCenter() {
             </button>
           </div>
 
-          {/* ── QUICK SCORE BAR ── */}
+          {/* ── QUICK SCORE BAR (PUNTO NUESTRO / PUNTO RIVAL) ── */}
           <div style={{ display:"flex", gap:8, marginBottom:14 }}>
-            <button onClick={() => quickScore("our")} style={{
-                flex: 1, padding: "10px 6px", borderRadius: 10,
+            <button onClick={() => openPointMenu("our")} style={{
+                flex: 1, minHeight: 44, padding: "10px 8px", borderRadius: 10,
                 border: `1px solid ${C.gn}`, background: C.gnBg, color: C.gnLt,
-                fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                cursor: "pointer"
               }}>
-              <Ico k="plus" sz={13}/> Punto Directo
+              <Ico k="plus" sz={14}/> Punto Nuestro
             </button>
-            <button onClick={() => quickScore("rival")} style={{
-                flex: 1, padding: "10px 6px", borderRadius: 10,
+            <button onClick={() => openPointMenu("rival")} style={{
+                flex: 1, minHeight: 44, padding: "10px 8px", borderRadius: 10,
                 border: `1px solid ${C.rd}`, background: C.rdBg, color: C.rdLt,
-                fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                cursor: "pointer"
               }}>
-              <Ico k="plus" sz={13}/> Punto Rival
+              <Ico k="plus" sz={14}/> Punto Rival
             </button>
           </div>
 
