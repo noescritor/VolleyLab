@@ -604,6 +604,12 @@ export default function LiveMatchCenter() {
     blockers: 0 | 1 | 2 | 3;
   } | null>(null);
 
+  // Setter Detail State (Modo Completo)
+  const [pendingSetterDetail, setPendingSetterDetail] = useState<{
+    action: RallyAction;
+    setTarget: SetTarget;
+  } | null>(null);
+
   // --- HYDRATION ---
   useEffect(() => {
     const saved = localStorage.getItem("volleyLab_liveMatch");
@@ -768,6 +774,14 @@ export default function LiveMatchCenter() {
       return;
     }
 
+    if (captureMode === 'completo' && targetGesture === 'armado') {
+      setPendingSetterDetail({
+        action,
+        setTarget: 4
+      });
+      return;
+    }
+
     executeRallyAction(action);
   };
 
@@ -831,6 +845,22 @@ export default function LiveMatchCenter() {
         }
       : action;
     setPendingAttackDetail(null);
+    executeRallyAction(finalAction);
+  };
+
+  const confirmSetterDetail = (withDetail: boolean) => {
+    if (!pendingSetterDetail) return;
+    const { action, setTarget } = pendingSetterDetail;
+    const finalAction: RallyAction = withDetail
+      ? {
+          ...action,
+          detail: {
+            ...(action.detail || {}),
+            setTarget
+          }
+        }
+      : action;
+    setPendingSetterDetail(null);
     executeRallyAction(finalAction);
   };
 
@@ -1794,6 +1824,89 @@ export default function LiveMatchCenter() {
               <button
                 type="button"
                 onClick={() => confirmAttackDetail(true)}
+                style={{
+                  minHeight: 44, padding: "10px 8px", borderRadius: 10,
+                  border: `1px solid ${C.vt}`, background: C.vtBg,
+                  color: C.vtLt, fontSize: 13, fontWeight: 600, cursor: 'pointer'
+                }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SETTER DISTRIBUTION MODAL (MODO COMPLETO) ── */}
+      {pendingSetterDetail && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', padding: 16 }}>
+          <div style={{ width: 330, maxHeight: '90vh', overflowY: 'auto', background: '#111116', border: `1px solid ${C.bd}`, borderRadius: 16, padding: 20 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div>
+                <h3 style={{ color: C.w, fontSize: 16, fontWeight: 700, margin: 0 }}>Distribución del Colocador</h3>
+                <span style={{ fontSize: 11, color: C.t2 }}>
+                  {getPlayerName(pendingSetterDetail.action.playerId || '')} · Calidad {pendingSetterDetail.action.quality}
+                </span>
+              </div>
+              <button
+                onClick={() => confirmSetterDetail(false)}
+                style={{ background: 'none', border: 'none', color: C.t2, cursor: 'pointer', padding: 4 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ color: C.t2, fontSize: 12, marginBottom: 16 }}>
+              ¿Hacia qué zona o atacante distribuyó el balón?
+            </p>
+
+            {/* Chips de Destino (4, 3, 2, Pipe 6, Zaga 1) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+              {[
+                { target: 4 as SetTarget, lbl: 'Zona 4 (Punta Izquierda)' },
+                { target: 2 as SetTarget, lbl: 'Zona 2 (Opuesto / Salida)' },
+                { target: 3 as SetTarget, lbl: 'Zona 3 (Central / Primer Tiempo)' },
+                { target: 6 as SetTarget, lbl: 'Pipe (Zona 6)' },
+                { target: 1 as SetTarget, lbl: 'Zaga (Zona 1)' },
+              ].map(item => {
+                const sel = pendingSetterDetail.setTarget === item.target;
+                return (
+                  <button
+                    key={item.target}
+                    type="button"
+                    onClick={() => setPendingSetterDetail(prev => prev ? ({ ...prev, setTarget: item.target }) : null)}
+                    style={{
+                      minHeight: 46, padding: "10px 14px", borderRadius: 10,
+                      border: `1px solid ${sel ? C.vt : C.bd}`,
+                      background: sel ? C.vtBg : 'rgba(255,255,255,0.02)',
+                      color: sel ? C.vtLt : C.t2,
+                      fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                  >
+                    {item.lbl}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => confirmSetterDetail(false)}
+                style={{
+                  minHeight: 44, padding: "10px 8px", borderRadius: 10,
+                  border: `1px solid ${C.bdMed}`, background: 'rgba(255,255,255,0.05)',
+                  color: C.t1, fontSize: 13, fontWeight: 500, cursor: 'pointer'
+                }}
+              >
+                Saltar
+              </button>
+              <button
+                type="button"
+                onClick={() => confirmSetterDetail(true)}
                 style={{
                   minHeight: 44, padding: "10px 8px", borderRadius: 10,
                   border: `1px solid ${C.vt}`, background: C.vtBg,
