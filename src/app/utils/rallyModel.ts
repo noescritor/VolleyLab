@@ -629,17 +629,16 @@ export function computeSetterDistribution(rallies: Rally[]): SetterDistributionM
         const target = a.detail.setTarget;
         if (!targets.includes(target)) continue;
 
-        // Buscar la recepción previa más reciente de nuestro equipo
+        // Solo cuenta si la acción justo anterior al armado es nuestra recepción inmediata
         let prevRecQuality: ('#' | '+' | '!' | '-') | null = null;
-        for (let j = i - 1; j >= 0; j--) {
-          const prev = actions[j];
+        if (i > 0) {
+          const prev = actions[i - 1];
           const prevG = String(prev.gesture).toLowerCase();
           if (prev.team === 'our' && (prevG === 'recepcion' || prevG === 'recepción')) {
             const nq = normalizeQuality(prev.quality);
             if (qualities.includes(nq as any)) {
               prevRecQuality = nq as ('#' | '+' | '!' | '-');
             }
-            break;
           }
         }
 

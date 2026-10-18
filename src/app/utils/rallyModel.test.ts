@@ -385,5 +385,43 @@ describe('rallyModel unit tests', () => {
       expect(res.matrix['-'][4]).toBe(1);
       expect(res.percentages['-'][4]).toBe(100);
     });
+
+    it('solo cuenta si la acción justo anterior al armado es nuestra recepción', () => {
+      const blankLineup: LineupMap = { p1: null, p2: null, p3: null, p4: null, p5: null, p6: null };
+      const testRallies: Rally[] = [
+        // Rally 1: recepción(#) → armado(4) → ataque(!) → punto_rival
+        {
+          id: 'r1', setNum: 1, servingTeam: 'rival', rotation: 1, phase: 'K1', winner: 'rival', pointType: 'perdido',
+          ourScore: 0, rivalScore: 1, lineup: blankLineup,
+          actions: [
+            { id: 'a1', ts: 1, phase: 'K1', team: 'our', gesture: 'recepcion', quality: '#', playerId: 'p1' },
+            { id: 'a2', ts: 2, phase: 'K1', team: 'our', gesture: 'armado', quality: '#', playerId: 'setter', detail: { setTarget: 4 } },
+            { id: 'a3', ts: 3, phase: 'K1', team: 'our', gesture: 'ataque', quality: '!', playerId: 'p2', detail: { attackZone: 4 } },
+            { id: 'a4', ts: 4, phase: 'K2', team: 'rival', gesture: 'punto_rival', quality: '#', playerId: null }
+          ]
+        },
+        // Rally 2 (contraataque): recepción(#) → armado(4) → ataque(!) → defensa(+) → armado(2)
+        // El primer armado cuenta; el segundo armado (tras defensa) NO cuenta
+        {
+          id: 'r2', setNum: 1, servingTeam: 'rival', rotation: 1, phase: 'K1', winner: 'our', pointType: 'ganado',
+          ourScore: 1, rivalScore: 1, lineup: blankLineup,
+          actions: [
+            { id: 'b1', ts: 1, phase: 'K1', team: 'our', gesture: 'recepcion', quality: '#', playerId: 'p1' },
+            { id: 'b2', ts: 2, phase: 'K1', team: 'our', gesture: 'armado', quality: '#', playerId: 'setter', detail: { setTarget: 4 } },
+            { id: 'b3', ts: 3, phase: 'K1', team: 'our', gesture: 'ataque', quality: '!', playerId: 'p2', detail: { attackZone: 4 } },
+            { id: 'b4', ts: 4, phase: 'K2', team: 'our', gesture: 'defensa', quality: '+', playerId: 'p1' },
+            { id: 'b5', ts: 5, phase: 'K2', team: 'our', gesture: 'armado', quality: '+', playerId: 'setter', detail: { setTarget: 2 } },
+            { id: 'b6', ts: 6, phase: 'K2', team: 'our', gesture: 'ataque', quality: '#', playerId: 'p3', detail: { attackZone: 2 } }
+          ]
+        }
+      ];
+
+      const res = computeSetterDistribution(testRallies);
+      expect(res.totalSets).toBe(2);
+      expect(res.matrix['#'][4]).toBe(2);
+      expect(res.matrix['#'][2]).toBe(0);
+      expect(res.totalsByTarget[4]).toBe(2);
+      expect(res.totalsByTarget[2]).toBe(0);
+    });
   });
 });
