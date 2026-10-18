@@ -523,6 +523,7 @@ export default function LiveMatchCenter() {
   const [opponent, setOpponent] = useState("");
   const [matchType, setMatchType] = useState("Amistoso");
   const [subRule, setSubRule] = useState(6); // 6 (FIVB) or 12 (Juvenil)
+  const [captureMode, setCaptureMode] = useState<'rapido' | 'completo'>('rapido');
 
   /* — Navigation — */
   const [screen, setScreen] = useState("setup"); // "setup" | "lineup" | "live"
@@ -589,6 +590,7 @@ export default function LiveMatchCenter() {
         if (s.opponent) setOpponent(s.opponent);
         if (s.matchType) setMatchType(s.matchType);
         if (s.subRule) setSubRule(s.subRule);
+        if (s.captureMode === 'rapido' || s.captureMode === 'completo') setCaptureMode(s.captureMode);
         if (s.screen) setScreen(s.screen);
         if (s.setNum) setSetNum(s.setNum);
         if (s.lineup) setLineup(s.lineup);
@@ -613,13 +615,13 @@ export default function LiveMatchCenter() {
   useEffect(() => {
     if (screen !== "setup") {
       const stateToSave = {
-        opponent, matchType, subRule, screen, setNum, lineup, firstServingTeam,
+        opponent, matchType, subRule, captureMode, screen, setNum, lineup, firstServingTeam,
         allRallies, timeline, setsScores, currentRallyActions,
         ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts, rotationCount
       };
       localStorage.setItem("volleyLab_liveMatch", JSON.stringify(stateToSave));
     }
-  }, [opponent, matchType, subRule, screen, setNum, lineup, firstServingTeam, allRallies, timeline, setsScores, currentRallyActions, ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts, rotationCount]);
+  }, [opponent, matchType, subRule, captureMode, screen, setNum, lineup, firstServingTeam, allRallies, timeline, setsScores, currentRallyActions, ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts, rotationCount]);
 
 
   /* — Derived Players — */
@@ -1017,7 +1019,9 @@ export default function LiveMatchCenter() {
         score: scoreStr,
         result: resultStr,
         rallies: allRallies,
-        timeline
+        timeline,
+        schemaVersion: 2,
+        captureMode
       } as any);
 
       localStorage.removeItem("volleyLab_liveMatch");
@@ -1072,7 +1076,7 @@ export default function LiveMatchCenter() {
             </select>
           </div>
 
-          <div style={{ marginBottom: 32 }}>
+          <div style={{ marginBottom: 16 }}>
             <label style={{ display:"block", color:C.t2, fontSize:12, marginBottom:8 }}>Regla de Sustituciones</label>
             <select 
               value={subRule} onChange={e => setSubRule(Number(e.target.value))}
@@ -1081,6 +1085,54 @@ export default function LiveMatchCenter() {
               <option value={6} style={{ background: C.bg, color: C.w }}>6 Cambios (Regla FIVB)</option>
               <option value={12} style={{ background: C.bg, color: C.w }}>12 Cambios (Regla Juvenil)</option>
             </select>
+          </div>
+
+          <div style={{ marginBottom: 28 }}>
+            <label style={{ display:"block", color:C.t2, fontSize:12, marginBottom:8 }}>Modo de Captura</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => setCaptureMode('rapido')}
+                style={{
+                  minHeight: 52,
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${captureMode === 'rapido' ? C.vt : C.bd}`,
+                  background: captureMode === 'rapido' ? C.vtBg : "rgba(255,255,255,0.02)",
+                  color: captureMode === 'rapido' ? C.vtLt : C.t2,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  gap: 2,
+                  cursor: "pointer",
+                  textAlign: "left"
+                }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Modo Rápido</span>
+                <span style={{ fontSize: 10, opacity: 0.7 }}>Jugador + gesto + calidad</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCaptureMode('completo')}
+                style={{
+                  minHeight: 52,
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${captureMode === 'completo' ? C.vt : C.bd}`,
+                  background: captureMode === 'completo' ? C.vtBg : "rgba(255,255,255,0.02)",
+                  color: captureMode === 'completo' ? C.vtLt : C.t2,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  gap: 2,
+                  cursor: "pointer",
+                  textAlign: "left"
+                }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Modo Completo</span>
+                <span style={{ fontSize: 10, opacity: 0.7 }}>Detalles tácticos y zonas</span>
+              </button>
+            </div>
           </div>
 
           <button onClick={handleCreateMatch} style={{
@@ -1712,6 +1764,20 @@ export default function LiveMatchCenter() {
                   textTransform: "uppercase"
                 }}>
                   {getCurrentServingTeam(currentRallyActions) === 'rival' ? 'K1' : 'K2'}
+                </span>
+                <span style={{
+                  fontFamily: "'DM Mono',monospace",
+                  fontSize: 9,
+                  fontWeight: 600,
+                  color: captureMode === 'completo' ? C.vtLt : C.t3,
+                  background: captureMode === 'completo' ? C.vtBg : "rgba(255,255,255,0.03)",
+                  border: `1px solid ${captureMode === 'completo' ? C.vtBd : C.bd}`,
+                  borderRadius: 5,
+                  padding: "1px 5px",
+                  lineHeight: "16px",
+                  textTransform: "uppercase"
+                }}>
+                  {captureMode === 'completo' ? 'COMPLETO' : 'RÁPIDO'}
                 </span>
               </div>
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
