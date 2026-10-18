@@ -9,7 +9,10 @@ import {
   computeActionPhase,
   QUALITY_LABELS,
   RallyAction,
-  Rotation
+  Rotation,
+  ServeType,
+  CourtZone,
+  ActionDetail
 } from "../../utils/rallyModel";
 
 /* ═══════════════════════════════════════════
@@ -581,6 +584,15 @@ export default function LiveMatchCenter() {
   } | null>(null);
   const [rivalNumberInput, setRivalNumberInput] = useState<string>('');
 
+  // Serve Detail State (Modo Completo)
+  const [lastServeTypeByPlayer, setLastServeTypeByPlayer] = useState<Record<string, ServeType>>({});
+  const [pendingServeDetail, setPendingServeDetail] = useState<{
+    action: RallyAction;
+    serveType: ServeType;
+    serveFrom: 1 | 6 | 5;
+    serveTo?: CourtZone;
+  } | null>(null);
+
   // --- HYDRATION ---
   useEffect(() => {
     const saved = localStorage.getItem("volleyLab_liveMatch");
@@ -591,6 +603,7 @@ export default function LiveMatchCenter() {
         if (s.matchType) setMatchType(s.matchType);
         if (s.subRule) setSubRule(s.subRule);
         if (s.captureMode === 'rapido' || s.captureMode === 'completo') setCaptureMode(s.captureMode);
+        if (s.lastServeTypeByPlayer) setLastServeTypeByPlayer(s.lastServeTypeByPlayer);
         if (s.screen) setScreen(s.screen);
         if (s.setNum) setSetNum(s.setNum);
         if (s.lineup) setLineup(s.lineup);
@@ -615,13 +628,13 @@ export default function LiveMatchCenter() {
   useEffect(() => {
     if (screen !== "setup") {
       const stateToSave = {
-        opponent, matchType, subRule, captureMode, screen, setNum, lineup, firstServingTeam,
+        opponent, matchType, subRule, captureMode, lastServeTypeByPlayer, screen, setNum, lineup, firstServingTeam,
         allRallies, timeline, setsScores, currentRallyActions,
         ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts, rotationCount
       };
       localStorage.setItem("volleyLab_liveMatch", JSON.stringify(stateToSave));
     }
-  }, [opponent, matchType, subRule, captureMode, screen, setNum, lineup, firstServingTeam, allRallies, timeline, setsScores, currentRallyActions, ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts, rotationCount]);
+  }, [opponent, matchType, subRule, captureMode, lastServeTypeByPlayer, screen, setNum, lineup, firstServingTeam, allRallies, timeline, setsScores, currentRallyActions, ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts, rotationCount]);
 
 
   /* — Derived Players — */
@@ -721,14 +734,28 @@ export default function LiveMatchCenter() {
       )
     };
 
+    if (captureMode === 'completo' && targetGesture === 'saque') {
+      const defaultType = lastServeTypeByPlayer[targetPlayer] || 'flotado';
+      setPendingServeDetail({
+        action,
+        serveType: defaultType,
+        serveFrom: 1
+      });
+      return;
+    }
+
+    executeRallyAction(action);
+  };
+
+  const executeRallyAction = (action: RallyAction) => {
     const outcome = rallyOutcomeFromAction(action);
 
     if (!outcome.isClosed) {
       // Punto sigue
       pushH();
       setCurrentRallyActions(prev => [...prev, action]);
-      const label = QUALITY_LABELS[action.gesture]?.[key] || key;
-      setMsg(`${label} de ${getPlayerName(targetPlayer)}`);
+      const label = QUALITY_LABELS[action.gesture]?.[action.quality] || action.quality;
+      setMsg(`${label} de ${getPlayerName(action.playerId || '')}`);
     } else if (outcome.winner === 'our') {
       // Punto nuestro
       setPendingEndResult({ winner: 'our', action });
@@ -736,6 +763,33 @@ export default function LiveMatchCenter() {
       // Error nuestro / Punto rival: abre modal de tipo de error
       setPendingError(action);
     }
+  };
+
+  const parseCourtZone = (zoneStr: string): CourtZone | undefined => {
+    const num = parseInt(zoneStr.replace(/\D/g, ''), 10);
+    if (num >= 1 && num <= 6) return num as CourtZone;
+    return undefined;
+  };
+
+  const confirmServeDetail = (withDetail: boolean) => {
+    if (!pendingServeDetail) return;
+    const { action, serveType, serveFrom, serveTo } = pendingServeDetail;
+    if (action.playerId && withDetail) {
+      setLastServeTypeByPlayer(prev => ({ ...prev, [action.playerId!]: serveType }));
+    }
+    const finalAction: RallyAction = withDetail
+      ? {
+          ...action,
+          detail: {
+            ...(action.detail || {}),
+            serveType,
+            serveFrom,
+            ...(serveTo ? { serveTo } : {})
+          }
+        }
+      : action;
+    setPendingServeDetail(null);
+    executeRallyAction(finalAction);
   };
 
   const handleSelectErrorReason = (reason: string) => {
@@ -1393,6 +1447,171 @@ export default function LiveMatchCenter() {
             }}>
               Saltar Mapa
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── SERVE DETAIL MODAL (MODO COMPLETO) ── */}
+      {pendingServeDetail && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', padding: 16 }}>
+          <div style={{ width: 330, maxHeight: '90vh', overflowY: 'auto', background: '#111116', border: `1px solid ${C.bd}`, borderRadius: 16, padding: 20 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div>
+                <h3 style={{ color: C.w, fontSize: 16, fontWeight: 700, margin: 0 }}>Detalle de Saque</h3>
+                <span style={{ fontSize: 11, color: C.t2 }}>
+                  {getPlayerName(pendingServeDetail.action.playerId || '')} · Calidad {pendingServeDetail.action.quality}
+                </span>
+              </div>
+              <button
+                onClick={() => confirmServeDetail(false)}
+                style={{ background: 'none', border: 'none', color: C.t2, cursor: 'pointer', padding: 4 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* 1. Tipo de Saque Chips */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: C.t2, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                Tipo de Saque
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                {(['flotado', 'salto', 'salto_flotado'] as ServeType[]).map(st => {
+                  const sel = pendingServeDetail.serveType === st;
+                  const label = st === 'flotado' ? 'Flotado' : st === 'salto' ? 'Salto' : 'Salto-Flot.';
+                  return (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setPendingServeDetail(prev => prev ? ({ ...prev, serveType: st }) : null)}
+                      style={{
+                        minHeight: 44, padding: "8px 4px", borderRadius: 8,
+                        border: `1px solid ${sel ? C.vt : C.bd}`,
+                        background: sel ? C.vtBg : 'rgba(255,255,255,0.02)',
+                        color: sel ? C.vtLt : C.t2,
+                        fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. Zona de Origen (1, 6, 5) */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: C.t2, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                Origen del Saque
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                {([1, 6, 5] as (1 | 6 | 5)[]).map(fromZ => {
+                  const sel = pendingServeDetail.serveFrom === fromZ;
+                  const label = fromZ === 1 ? 'Zona 1 (Der)' : fromZ === 6 ? 'Zona 6 (Cen)' : 'Zona 5 (Izq)';
+                  return (
+                    <button
+                      key={fromZ}
+                      type="button"
+                      onClick={() => setPendingServeDetail(prev => prev ? ({ ...prev, serveFrom: fromZ }) : null)}
+                      style={{
+                        minHeight: 44, padding: "8px 4px", borderRadius: 8,
+                        border: `1px solid ${sel ? C.vt : C.bd}`,
+                        background: sel ? C.vtBg : 'rgba(255,255,255,0.02)',
+                        color: sel ? C.vtLt : C.t2,
+                        fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 3. Destino Cancha Rival (tocar heatmap o chips) */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 11, color: C.t2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Destino Rival {pendingServeDetail.serveTo ? `(Zona ${pendingServeDetail.serveTo})` : ''}
+                </span>
+                {pendingServeDetail.serveTo && (
+                  <button
+                    onClick={() => setPendingServeDetail(prev => prev ? ({ ...prev, serveTo: undefined }) : null)}
+                    style={{ fontSize: 10, color: C.t3, background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+              
+              {/* Heatmap touch */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+                <CourtHeatmap
+                  mode="capture"
+                  viewHalf="top"
+                  width={240}
+                  height={240}
+                  onCapture={(impact) => {
+                    const zoneKey = getZoneFromXY(impact.x, impact.y, 240, 240);
+                    const z = parseCourtZone(zoneKey);
+                    if (z) {
+                      setPendingServeDetail(prev => prev ? ({ ...prev, serveTo: z }) : null);
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Or Quick Zone Chips 1..6 */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+                {([1, 2, 3, 4, 5, 6] as CourtZone[]).map(z => {
+                  const sel = pendingServeDetail.serveTo === z;
+                  return (
+                    <button
+                      key={z}
+                      type="button"
+                      onClick={() => setPendingServeDetail(prev => prev ? ({ ...prev, serveTo: z }) : null)}
+                      style={{
+                        minHeight: 44, borderRadius: 6,
+                        border: `1px solid ${sel ? C.vt : C.bd}`,
+                        background: sel ? C.vtBg : 'rgba(255,255,255,0.03)',
+                        color: sel ? C.vtLt : C.t2,
+                        fontFamily: "'DM Mono', monospace",
+                        fontSize: 13, fontWeight: 700, cursor: 'pointer'
+                      }}
+                    >
+                      {z}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => confirmServeDetail(false)}
+                style={{
+                  minHeight: 44, padding: "10px 8px", borderRadius: 10,
+                  border: `1px solid ${C.bdMed}`, background: 'rgba(255,255,255,0.05)',
+                  color: C.t1, fontSize: 13, fontWeight: 500, cursor: 'pointer'
+                }}
+              >
+                Saltar Detalle
+              </button>
+              <button
+                type="button"
+                onClick={() => confirmServeDetail(true)}
+                style={{
+                  minHeight: 44, padding: "10px 8px", borderRadius: 10,
+                  border: `1px solid ${C.vt}`, background: C.vtBg,
+                  color: C.vtLt, fontSize: 13, fontWeight: 600, cursor: 'pointer'
+                }}
+              >
+                Confirmar Saque
+              </button>
+            </div>
           </div>
         </div>
       )}
