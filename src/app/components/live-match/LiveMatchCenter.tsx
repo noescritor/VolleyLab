@@ -562,6 +562,7 @@ export default function LiveMatchCenter() {
   const [subsUsed, setSubsUsed] = useState(0);
   const [ourTimeouts, setOurTimeouts] = useState(0);
   const [rivalTimeouts, setRivalTimeouts] = useState(0);
+  const [rotationCount, setRotationCount] = useState<number>(0);
 
   // --- HYDRATION ---
   useEffect(() => {
@@ -585,6 +586,7 @@ export default function LiveMatchCenter() {
         if (s.subsUsed) setSubsUsed(s.subsUsed);
         if (s.ourTimeouts) setOurTimeouts(s.ourTimeouts);
         if (s.rivalTimeouts) setRivalTimeouts(s.rivalTimeouts);
+        if (typeof s.rotationCount === 'number') setRotationCount(s.rotationCount);
       } catch (e) {
         console.error("Error loading match state", e);
       }
@@ -597,11 +599,11 @@ export default function LiveMatchCenter() {
       const stateToSave = {
         opponent, matchType, subRule, screen, setNum, lineup, firstServingTeam,
         allRallies, timeline, setsScores, currentRallyActions,
-        ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts
+        ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts, rotationCount
       };
       localStorage.setItem("volleyLab_liveMatch", JSON.stringify(stateToSave));
     }
-  }, [opponent, matchType, subRule, screen, setNum, lineup, firstServingTeam, allRallies, timeline, setsScores, currentRallyActions, ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts]);
+  }, [opponent, matchType, subRule, screen, setNum, lineup, firstServingTeam, allRallies, timeline, setsScores, currentRallyActions, ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts, rotationCount]);
 
 
   /* — Derived Players — */
@@ -618,7 +620,7 @@ export default function LiveMatchCenter() {
   /* — Undo History — */
   const snap = () => ({
     ourScore, rivalScore, lineup: dc(lineup),
-    currentRallyActions: dc(currentRallyActions), subsUsed, ourTimeouts, rivalTimeouts,
+    currentRallyActions: dc(currentRallyActions), subsUsed, ourTimeouts, rivalTimeouts, rotationCount,
     allRallies: dc(allRallies), timeline: dc(timeline)
   });
   const pushH = () => setHist(h => [...h.slice(-19), snap()]);
@@ -633,6 +635,7 @@ export default function LiveMatchCenter() {
     setSubsUsed(p.subsUsed);
     setOurTimeouts(p.ourTimeouts);
     setRivalTimeouts(p.rivalTimeouts);
+    if (typeof p.rotationCount === 'number') setRotationCount(p.rotationCount);
     if (p.allRallies) setAllRallies(p.allRallies);
     if (p.timeline) setTimeline(p.timeline);
     setHist(h => h.slice(0, -1));
@@ -673,6 +676,7 @@ export default function LiveMatchCenter() {
     setOurScore(0); setRivalScore(0); 
     if (setNum === 1) setSetsScores([]);
     setSubsUsed(0); setOurTimeouts(0); setRivalTimeouts(0);
+    setRotationCount(0);
     setCurrentRallyActions([]);
     setScreen("live");
   };
@@ -825,6 +829,7 @@ export default function LiveMatchCenter() {
       doFlash("our");
       if (servingTeam === "rival") {
         setLineup((l: any) => rotateLineup(l));
+        setRotationCount(c => c + 1);
         setMsg("¡Side-out ganado! Rotación automática");
       } else {
         setMsg("¡Punto ganado!");
@@ -844,6 +849,7 @@ export default function LiveMatchCenter() {
   const rotate = () => {
     pushH();
     setLineup((l:any) => rotateLineup(l));
+    setRotationCount(c => c + 1);
     setMsg("Rotación aplicada");
   };
 
@@ -884,6 +890,7 @@ export default function LiveMatchCenter() {
     setEditZone(null);
     setOurScore(0);
     setRivalScore(0);
+    setRotationCount(0);
     setScreen("lineup");
   };
 
@@ -1254,8 +1261,38 @@ export default function LiveMatchCenter() {
           {/* ── HEADER ── */}
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14 }}>
             <div>
-              <div style={{ fontSize:10, color:C.t2, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:4 }}>
-                Vs {opponent} · Set {setNum}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize:10, color:C.t2, letterSpacing:"0.08em", textTransform:"uppercase" }}>
+                  Vs {opponent} · Set {setNum}
+                </span>
+                <span style={{
+                  fontFamily: "'DM Mono',monospace",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: C.vtLt,
+                  background: C.vtBg,
+                  border: `1px solid ${C.vtBd}`,
+                  borderRadius: 5,
+                  padding: "1px 6px",
+                  lineHeight: "16px",
+                  textTransform: "uppercase"
+                }}>
+                  {`P${computeRotation(lineup, players, rotationCount)}`}
+                </span>
+                <span style={{
+                  fontFamily: "'DM Mono',monospace",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: C.t2,
+                  background: "rgba(255,255,255,0.04)",
+                  border: `1px solid ${C.bd}`,
+                  borderRadius: 5,
+                  padding: "1px 5px",
+                  lineHeight: "16px",
+                  textTransform: "uppercase"
+                }}>
+                  {getCurrentServingTeam(currentRallyActions) === 'rival' ? 'K1' : 'K2'}
+                </span>
               </div>
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                 {/* Score */}
