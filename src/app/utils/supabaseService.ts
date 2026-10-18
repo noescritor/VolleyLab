@@ -239,27 +239,60 @@ class SupabaseService {
 
   async updatePlayer(playerId: string, playerData: any, rosterData: any) {
     const orgId = await this.getUserOrg();
+    if (!orgId) throw new Error('No org context');
     
-    // Update global physical stats (only if owner or ghost profile... ideally RLS handles this, but for now we just attempt it)
+    // Update global physical stats
     if (Object.keys(playerData).length > 0) {
-      await this.supabase.from('global_players').update(playerData).eq('id', playerId);
+      const { error: gpError } = await this.supabase
+        .from('global_players')
+        .update(playerData)
+        .eq('id', playerId);
+      if (gpError) throw gpError;
     }
     
     // Update club roster info
     if (Object.keys(rosterData).length > 0) {
-      await this.supabase.from('club_roster')
+      const { error: rosterError } = await this.supabase
+        .from('club_roster')
         .update(rosterData)
         .eq('player_id', playerId)
         .eq('org_id', orgId);
+      if (rosterError) throw rosterError;
     }
   }
 
   async removePlayerFromRoster(playerId: string) {
     const orgId = await this.getUserOrg();
-    await this.supabase.from('club_roster')
+    if (!orgId) throw new Error('No org context');
+    const { error } = await this.supabase
+      .from('club_roster')
       .update({ status: 'transferred' })
       .eq('player_id', playerId)
       .eq('org_id', orgId);
+    if (error) throw error;
+  }
+
+  async clearAllData() {
+    const orgId = await this.getUserOrg();
+    if (!orgId) throw new Error('No org context');
+
+    const { error: testsErr } = await this.supabase
+      .from('player_tests')
+      .delete()
+      .eq('org_id', orgId);
+    if (testsErr) throw testsErr;
+
+    const { error: matchesErr } = await this.supabase
+      .from('matches')
+      .delete()
+      .eq('org_id', orgId);
+    if (matchesErr) throw matchesErr;
+
+    const { error: rosterErr } = await this.supabase
+      .from('club_roster')
+      .delete()
+      .eq('org_id', orgId);
+    if (rosterErr) throw rosterErr;
   }
 
   // ==========================================
