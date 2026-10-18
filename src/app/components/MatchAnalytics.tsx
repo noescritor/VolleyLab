@@ -400,7 +400,7 @@ export function MatchAnalytics() {
   const v2Stats = useMemo(() => {
     if (!dynStats?.rallies) return null;
     const rallies = dynStats.rallies;
-    const isV2 = rallies.some((r: any) => r.rotation !== undefined || r.phase !== undefined || r.servingTeam !== undefined);
+    const isV2 = rallies.some((r: any) => r.rotation !== undefined && r.rotation !== null);
     const rotationStats = computeRotationStats(rallies);
     const receptionStats = computeReceptionStats(rallies);
     const attackStats = computeAttackStats(rallies);

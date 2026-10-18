@@ -191,7 +191,11 @@ export function computeRotationStats(rallies: Rally[]): Record<Rotation, Rotatio
   };
 
   rallies.forEach(rally => {
-    const rot = (rally.rotation >= 1 && rally.rotation <= 6 ? rally.rotation : 1) as Rotation;
+    // Ignorar rallies sin rotación definida o fuera del rango 1..6 (no enviarlos a P1)
+    if (typeof rally.rotation !== 'number' || rally.rotation < 1 || rally.rotation > 6) {
+      return;
+    }
+    const rot = rally.rotation as Rotation;
     const stat = result[rot];
     const isOurWin = rally.winner === 'our';
 

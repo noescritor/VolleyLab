@@ -170,6 +170,27 @@ describe('rallyModel unit tests', () => {
       expect(stats[2].breakPointPct).toBe(0);
       expect(stats[2].pointDiff).toBe(-1); // 2 ganados - 3 perdidos
     });
+
+    it('ignora rallies sin rotation o con rotacion invalida (no los manda a P1)', () => {
+      const blankLineup: LineupMap = { p1: null, p2: null, p3: null, p4: null, p5: null, p6: null };
+      const testRallies: any[] = [
+        { id: 'leg1', setNum: 1, servingTeam: 'rival', phase: 'K1', winner: 'our', actions: [], lineup: blankLineup },
+        { id: 'leg2', setNum: 1, servingTeam: 'our', phase: 'K2', winner: 'rival', actions: [], lineup: blankLineup, rotation: undefined },
+        { id: 'leg3', setNum: 1, servingTeam: 'rival', phase: 'K1', winner: 'our', actions: [], lineup: blankLineup, rotation: null },
+        { id: 'leg4', setNum: 1, servingTeam: 'rival', phase: 'K1', winner: 'our', actions: [], lineup: blankLineup, rotation: 0 },
+        { id: 'leg5', setNum: 1, servingTeam: 'rival', phase: 'K1', winner: 'our', actions: [], lineup: blankLineup, rotation: 7 },
+        { id: 'val1', setNum: 1, servingTeam: 'rival', rotation: 3, phase: 'K1', winner: 'our', actions: [], lineup: blankLineup },
+      ];
+
+      const stats = computeRotationStats(testRallies as Rally[]);
+      expect(stats[1].k1Rallies).toBe(0);
+      expect(stats[1].k2Rallies).toBe(0);
+      expect(stats[1].pointDiff).toBe(0);
+
+      expect(stats[3].k1Rallies).toBe(1);
+      expect(stats[3].k1Wins).toBe(1);
+      expect(stats[3].pointDiff).toBe(1);
+    });
   });
 
   describe('computeReceptionStats', () => {

@@ -27,7 +27,7 @@ export const PrintableMatchReport = React.forwardRef<HTMLDivElement, PrintableMa
 
   const { teamBalance, rallies, sideOutPct, transPct, errorPhaseFreq, historicalAvg, subImpact, momentum } = dynStats;
 
-  const isV2 = (rallies || []).some((r: any) => r.rotation !== undefined || r.phase !== undefined || r.servingTeam !== undefined);
+  const isV2 = (rallies || []).some((r: any) => r.rotation !== undefined && r.rotation !== null);
   const rotationStats = computeRotationStats(rallies || []);
   const setterDist = computeSetterDistribution(rallies || []);
   const pointsOrigin = computePointsByOrigin(rallies || []);
