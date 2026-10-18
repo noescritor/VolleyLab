@@ -1027,7 +1027,7 @@ export default function LiveMatchCenter() {
       id: crypto.randomUUID(),
       winner: pendingEndResult.winner,
       servingTeam,
-      rotation: computeRotation(lineup, players),
+      rotation: computeRotation(lineup, players, rotationCount),
       phase: servingTeam === 'rival' ? ('K1' as const) : ('K2' as const),
       pointType,
       ourScore: nextOurScore,

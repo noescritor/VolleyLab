@@ -99,6 +99,11 @@ describe('rallyModel unit tests', () => {
       expect(computeRotation(emptyLineup, players, 1)).toBe(1);
       expect(computeRotation(emptyLineup, players, 3)).toBe(3);
     });
+
+    it('uses setter position primarily even when rotationCount is provided', () => {
+      const lineupP3: LineupMap = { p1: 'p-oh1', p2: 'p-mb1', p3: 'p-setter', p4: 'p-opp', p5: 'p-oh2', p6: 'p-mb2' };
+      expect(computeRotation(lineupP3, players, 5)).toBe(3);
+    });
   });
 
   describe('computeActionPhase', () => {
