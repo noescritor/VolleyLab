@@ -518,6 +518,7 @@ export default function LiveMatchCenter() {
 
   /* — Lineup state — */
   const [lineup, setLineup] = useState<any>({ p1:null, p2:null, p3:null, p4:null, p5:null, p6:null });
+  const [firstServingTeam, setFirstServingTeam] = useState<'our' | 'rival'>('our');
   const [prevLu, setPrevLu] = useState<any>(null);
   const [editZone, setEditZone] = useState<string|null>(null);
 
@@ -561,6 +562,7 @@ export default function LiveMatchCenter() {
         if (s.screen) setScreen(s.screen);
         if (s.setNum) setSetNum(s.setNum);
         if (s.lineup) setLineup(s.lineup);
+        if (s.firstServingTeam) setFirstServingTeam(s.firstServingTeam);
         if (s.allRallies) setAllRallies(s.allRallies);
         if (s.timeline) setTimeline(s.timeline);
         if (s.setsScores) setSetsScores(s.setsScores);
@@ -580,13 +582,13 @@ export default function LiveMatchCenter() {
   useEffect(() => {
     if (screen !== "setup") {
       const stateToSave = {
-        opponent, matchType, subRule, screen, setNum, lineup,
+        opponent, matchType, subRule, screen, setNum, lineup, firstServingTeam,
         allRallies, timeline, setsScores, currentRallyActions,
         ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts
       };
       localStorage.setItem("volleyLab_liveMatch", JSON.stringify(stateToSave));
     }
-  }, [opponent, matchType, subRule, screen, setNum, lineup, allRallies, timeline, setsScores, currentRallyActions, ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts]);
+  }, [opponent, matchType, subRule, screen, setNum, lineup, firstServingTeam, allRallies, timeline, setsScores, currentRallyActions, ourScore, rivalScore, subsUsed, ourTimeouts, rivalTimeouts]);
 
 
   /* — Derived Players — */
@@ -633,7 +635,7 @@ export default function LiveMatchCenter() {
     const firstAction = actionsInRally?.[0];
     if (firstAction?.gesture === 'saque' && firstAction.playerId) return 'our';
     if (firstAction?.gesture === 'recepcion' || firstAction?.gesture === 'recepción') return 'rival';
-    return 'our';
+    return firstServingTeam;
   };
 
   const rotateLineup = (l: any) => ({ p1: l.p2, p2: l.p3, p3: l.p4, p4: l.p5, p5: l.p6, p6: l.p1 });
@@ -1036,6 +1038,47 @@ export default function LiveMatchCenter() {
               </div>
             </div>
           )}
+
+          {/* Primer saque del set */}
+          <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.bd}`, padding: "12px 14px", marginBottom: 12 }}>
+            <div style={{ fontSize: 10, color: C.t2, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+              ¿Quién saca primero en el Set {setNum}?
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => setFirstServingTeam('our')}
+                style={{
+                  padding: "9px 12px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  border: `1px solid ${firstServingTeam === 'our' ? C.vt : C.bd}`,
+                  background: firstServingTeam === 'our' ? C.vtBg : "transparent",
+                  color: firstServingTeam === 'our' ? C.vtLt : C.t2,
+                  transition: "all 0.15s"
+                }}
+              >
+                🏐 Nuestro Equipo
+              </button>
+              <button
+                type="button"
+                onClick={() => setFirstServingTeam('rival')}
+                style={{
+                  padding: "9px 12px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  border: `1px solid ${firstServingTeam === 'rival' ? '#FFD391' : C.bd}`,
+                  background: firstServingTeam === 'rival' ? 'rgba(255,211,145,0.1)' : "transparent",
+                  color: firstServingTeam === 'rival' ? '#FFD391' : C.t2,
+                  transition: "all 0.15s"
+                }}
+              >
+                🏐 {opponent || 'Rival'}
+              </button>
+            </div>
+          </div>
 
           {/* Start set */}
           <button onClick={filled === 6 ? startLive : undefined} style={{
