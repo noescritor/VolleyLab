@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { Volleyball } from "lucide-react";
 import { useApp } from "../../utils/AppContext";
 
 /* ═══════════════════════════════════════════
@@ -1053,13 +1054,18 @@ export default function LiveMatchCenter() {
                   borderRadius: 8,
                   fontSize: 13,
                   fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
                   border: `1px solid ${firstServingTeam === 'our' ? C.vt : C.bd}`,
                   background: firstServingTeam === 'our' ? C.vtBg : "transparent",
                   color: firstServingTeam === 'our' ? C.vtLt : C.t2,
                   transition: "all 0.15s"
                 }}
               >
-                🏐 Nuestro Equipo
+                <Volleyball size={14} />
+                <span>Nuestro Equipo</span>
               </button>
               <button
                 type="button"
@@ -1069,13 +1075,18 @@ export default function LiveMatchCenter() {
                   borderRadius: 8,
                   fontSize: 13,
                   fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
                   border: `1px solid ${firstServingTeam === 'rival' ? '#FFD391' : C.bd}`,
                   background: firstServingTeam === 'rival' ? 'rgba(255,211,145,0.1)' : "transparent",
                   color: firstServingTeam === 'rival' ? '#FFD391' : C.t2,
                   transition: "all 0.15s"
                 }}
               >
-                🏐 {opponent || 'Rival'}
+                <Volleyball size={14} />
+                <span>{opponent || 'Rival'}</span>
               </button>
             </div>
           </div>
