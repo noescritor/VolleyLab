@@ -53,8 +53,14 @@ describe('rallyModel unit tests', () => {
       expect(rallyOutcomeFromAction({ team: 'our', gesture: 'defensa', quality: '#' }).isClosed).toBe(false);
     });
 
-    it('cierra punto para rival en = de cualquier gesto nuestro', () => {
-      const gestures = ['saque', 'recepcion', 'armado', 'ataque', 'dejada', 'bloqueo', 'defensa'] as const;
+    it('cierra punto para rival con pointType perdido en = de recepción nuestra (ace recibido)', () => {
+      expect(rallyOutcomeFromAction({ team: 'our', gesture: 'recepcion', quality: '=' })).toEqual({
+        isClosed: true, winner: 'rival', pointType: 'perdido'
+      });
+    });
+
+    it('cierra punto para rival con pointType regalado_nuestro en = de otros gestos nuestros', () => {
+      const gestures = ['saque', 'armado', 'ataque', 'dejada', 'bloqueo', 'defensa'] as const;
       gestures.forEach(g => {
         expect(rallyOutcomeFromAction({ team: 'our', gesture: g, quality: '=' })).toEqual({
           isClosed: true, winner: 'rival', pointType: 'regalado_nuestro'

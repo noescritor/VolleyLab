@@ -98,6 +98,10 @@ export function rallyOutcomeFromAction(action: Pick<RallyAction, 'team' | 'gestu
       return { isClosed: true, winner: 'our', pointType: 'ganado' };
     }
     if (q === '=') {
+      const g = String(action.gesture).toLowerCase();
+      if (g === 'recepcion' || g === 'recepción') {
+        return { isClosed: true, winner: 'rival', pointType: 'perdido' };
+      }
       return { isClosed: true, winner: 'rival', pointType: 'regalado_nuestro' };
     }
     return { isClosed: false };

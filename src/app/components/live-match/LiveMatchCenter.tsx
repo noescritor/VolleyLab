@@ -798,8 +798,37 @@ export default function LiveMatchCenter() {
       // Punto nuestro
       setPendingEndResult({ winner: 'our', action });
     } else if (outcome.winner === 'rival') {
-      // Error nuestro / Punto rival: abre modal de tipo de error
-      setPendingError(action);
+      const g = String(action.gesture).toLowerCase();
+      if ((g === 'recepcion' || g === 'recepción') && action.quality === '=') {
+        pushH();
+        const finalActions = [...currentRallyActions, action];
+        const servingTeam = getCurrentServingTeam(finalActions);
+        const nextOurScore = ourScore;
+        const nextRivalScore = rivalScore + 1;
+        const newRally = {
+          id: crypto.randomUUID(),
+          winner: 'rival' as const,
+          servingTeam,
+          rotation: computeRotation(lineup, players, rotationCount),
+          phase: servingTeam === 'rival' ? ('K1' as const) : ('K2' as const),
+          pointType: 'perdido' as const,
+          ourScore: nextOurScore,
+          rivalScore: nextRivalScore,
+          setNum,
+          endLocation: 'ace_rival',
+          actions: finalActions,
+          lineup: dc(lineup)
+        };
+        setAllRallies(prev => [...prev, newRally]);
+        setTimeline(prev => [...prev, { type: 'rally', data: newRally }]);
+        setRivalScore(nextRivalScore);
+        doFlash("rival");
+        setMsg(`Punto rival (Ace rival sobre ${getPlayerName(action.playerId || '')})`);
+        setCurrentRallyActions([]);
+      } else {
+        // Error nuestro / Punto rival: abre modal de tipo de error
+        setPendingError(action);
+      }
     }
   };
 
