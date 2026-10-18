@@ -5,6 +5,9 @@ import {
   computeRotation,
   computeActionPhase,
   computeRotationStats,
+  computeReceptionStats,
+  computeAttackStats,
+  computePointsByOrigin,
   Rally,
   LineupMap
 } from './rallyModel';
@@ -148,6 +151,140 @@ describe('rallyModel unit tests', () => {
       expect(stats[2].k2Wins).toBe(0);
       expect(stats[2].breakPointPct).toBe(0);
       expect(stats[2].pointDiff).toBe(-1); // 2 ganados - 3 perdidos
+    });
+  });
+
+  describe('computeReceptionStats', () => {
+    it('computes reception metrics per player with 5-level quality', () => {
+      const blankLineup: LineupMap = { p1: null, p2: null, p3: null, p4: null, p5: null, p6: null };
+      const testRallies: Rally[] = [
+        {
+          id: 'r1', setNum: 1, servingTeam: 'rival', rotation: 1, phase: 'K1', winner: 'our', pointType: 'ganado',
+          ourScore: 1, rivalScore: 0, lineup: blankLineup,
+          actions: [
+            { id: 'a1', ts: 0, phase: 'K1', team: 'our', gesture: 'recepcion', quality: '#', playerId: 'p1' },
+            { id: 'a2', ts: 0, phase: 'K1', team: 'our', gesture: 'armado', quality: '+', playerId: 'setter' },
+            { id: 'a3', ts: 0, phase: 'K1', team: 'our', gesture: 'ataque', quality: '#', playerId: 'p2' }
+          ]
+        },
+        {
+          id: 'r2', setNum: 1, servingTeam: 'rival', rotation: 1, phase: 'K1', winner: 'rival', pointType: 'regalado_nuestro',
+          ourScore: 1, rivalScore: 1, lineup: blankLineup,
+          actions: [
+            { id: 'a4', ts: 0, phase: 'K1', team: 'our', gesture: 'recepcion', quality: '=', playerId: 'p1' }
+          ]
+        },
+        {
+          id: 'r3', setNum: 1, servingTeam: 'rival', rotation: 1, phase: 'K1', winner: 'our', pointType: 'ganado',
+          ourScore: 2, rivalScore: 1, lineup: blankLineup,
+          actions: [
+            { id: 'a5', ts: 0, phase: 'K1', team: 'our', gesture: 'recepcion', quality: '+', playerId: 'p1' }
+          ]
+        },
+        {
+          id: 'r4', setNum: 1, servingTeam: 'rival', rotation: 1, phase: 'K1', winner: 'our', pointType: 'ganado',
+          ourScore: 3, rivalScore: 1, lineup: blankLineup,
+          actions: [
+            { id: 'a6', ts: 0, phase: 'K1', team: 'our', gesture: 'recepcion', quality: '!', playerId: 'p1' }
+          ]
+        }
+      ];
+
+      const res = computeReceptionStats(testRallies);
+      expect(res).toHaveLength(1);
+      const p1Stat = res[0];
+      expect(p1Stat.playerId).toBe('p1');
+      expect(p1Stat.total).toBe(4);
+      expect(p1Stat.perfect).toBe(1);
+      expect(p1Stat.positive).toBe(1);
+      expect(p1Stat.neutral).toBe(1);
+      expect(p1Stat.error).toBe(1);
+      expect(p1Stat.perfectPct).toBe(25); // 1/4 = 25%
+      expect(p1Stat.positivePct).toBe(50); // (1+1)/4 = 50%
+      expect(p1Stat.efficiencyPct).toBe(25); // (1+1 - 0 - 1) / 4 = 1/4 = 25%
+    });
+  });
+
+  describe('computeAttackStats', () => {
+    it('computes attack metrics breakdown by player, zone, type and blockers', () => {
+      const blankLineup: LineupMap = { p1: null, p2: null, p3: null, p4: null, p5: null, p6: null };
+      const testRallies: Rally[] = [
+        {
+          id: 'r1', setNum: 1, servingTeam: 'rival', rotation: 1, phase: 'K1', winner: 'our', pointType: 'ganado',
+          ourScore: 1, rivalScore: 0, lineup: blankLineup,
+          actions: [
+            {
+              id: 'a1', ts: 0, phase: 'K1', team: 'our', gesture: 'ataque', quality: '#', playerId: 'p_attacker',
+              detail: { attackZone: 4, attackType: 'rapida', blockers: 2 }
+            }
+          ]
+        },
+        {
+          id: 'r2', setNum: 1, servingTeam: 'rival', rotation: 1, phase: 'K1', winner: 'rival', pointType: 'regalado_nuestro',
+          ourScore: 1, rivalScore: 1, lineup: blankLineup,
+          actions: [
+            {
+              id: 'a2', ts: 0, phase: 'K1', team: 'our', gesture: 'ataque', quality: '=', playerId: 'p_attacker',
+              detail: { attackZone: 4, attackType: 'rapida', blockers: 2, errorType: 'bloqueado' }
+            }
+          ]
+        },
+        {
+          id: 'r3', setNum: 1, servingTeam: 'rival', rotation: 1, phase: 'K1', winner: 'rival', pointType: 'regalado_nuestro',
+          ourScore: 1, rivalScore: 2, lineup: blankLineup,
+          actions: [
+            {
+              id: 'a3', ts: 0, phase: 'K1', team: 'our', gesture: 'ataque', quality: '=', playerId: 'p_attacker',
+              detail: { attackZone: 2, attackType: 'alta', blockers: 1, errorType: 'fuera' }
+            }
+          ]
+        }
+      ];
+
+      const res = computeAttackStats(testRallies);
+      expect(res.total.attempts).toBe(3);
+      expect(res.total.kills).toBe(1);
+      expect(res.total.blocked).toBe(1);
+      expect(res.total.errors).toBe(1);
+      expect(res.total.efficiencyPct).toBe(-33); // (1 - 1 - 1) / 3 = -33%
+
+      expect(res.byZone[4].attempts).toBe(2);
+      expect(res.byZone[4].kills).toBe(1);
+      expect(res.byZone[4].blocked).toBe(1);
+      expect(res.byZone[4].efficiencyPct).toBe(0); // (1 - 0 - 1) / 2 = 0%
+
+      expect(res.byType.rapida.attempts).toBe(2);
+      expect(res.byBlockers[2].attempts).toBe(2);
+    });
+  });
+
+  describe('computePointsByOrigin', () => {
+    it('aggregates points by origin per set and total', () => {
+      const blankLineup: LineupMap = { p1: null, p2: null, p3: null, p4: null, p5: null, p6: null };
+      const testRallies: Rally[] = [
+        { id: '1', setNum: 1, servingTeam: 'our', rotation: 1, phase: 'K2', winner: 'our', pointType: 'ganado', ourScore: 1, rivalScore: 0, actions: [], lineup: blankLineup },
+        { id: '2', setNum: 1, servingTeam: 'our', rotation: 1, phase: 'K2', winner: 'our', pointType: 'regalado_rival', ourScore: 2, rivalScore: 0, actions: [], lineup: blankLineup },
+        { id: '3', setNum: 1, servingTeam: 'our', rotation: 1, phase: 'K2', winner: 'rival', pointType: 'perdido', ourScore: 2, rivalScore: 1, actions: [], lineup: blankLineup },
+        { id: '4', setNum: 1, servingTeam: 'rival', rotation: 1, phase: 'K1', winner: 'rival', pointType: 'regalado_nuestro', ourScore: 2, rivalScore: 2, actions: [], lineup: blankLineup },
+        { id: '5', setNum: 2, servingTeam: 'rival', rotation: 1, phase: 'K1', winner: 'our', pointType: 'ganado', ourScore: 1, rivalScore: 0, actions: [], lineup: blankLineup },
+      ];
+
+      const res = computePointsByOrigin(testRallies);
+      expect(res).toHaveLength(3); // Set 1, Set 2, Total
+
+      const set1 = res[0];
+      expect(set1.setNum).toBe(1);
+      expect(set1.ganado).toBe(1);
+      expect(set1.regalado_rival).toBe(1);
+      expect(set1.totalOurPoints).toBe(2);
+      expect(set1.perdido).toBe(1);
+      expect(set1.regalado_nuestro).toBe(1);
+      expect(set1.totalRivalPoints).toBe(2);
+
+      const total = res[2];
+      expect(total.setNum).toBe('total');
+      expect(total.ganado).toBe(2);
+      expect(total.totalOurPoints).toBe(3);
     });
   });
 });

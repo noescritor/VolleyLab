@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 
-import { Download, Loader2, Plus, Target, Shield, Zap, Activity, Calendar, MapPin, Users, TrendingUp } from 'lucide-react';
+import { Download, Loader2, Plus, Target, Shield, Zap, Activity, Calendar, MapPin, Users, TrendingUp, RotateCw, Layers, Info } from 'lucide-react';
 import { PrintableMatchReport } from './analytics/PrintableMatchReport';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
@@ -8,6 +8,15 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { toast } from 'sonner';
 import { useApp } from '../utils/AppContext';
 import { AdvancedHeatmapDashboard } from './AdvancedHeatmapDashboard';
+import {
+  computeRotationStats,
+  computeReceptionStats,
+  computeAttackStats,
+  computePointsByOrigin,
+  Rotation,
+  AttackZone,
+  AttackType
+} from '../utils/rallyModel';
 
 const INPUT_CLS = 'w-full bg-white/[0.04] border border-white/[0.08] rounded px-3 py-2.5 text-[13px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#A191FF]/50 transition-colors';
 const LABEL_CLS = 'block text-[11px] font-mono uppercase tracking-wide text-white/40 mb-1';
@@ -306,7 +315,8 @@ function computeDynamicStats(matches: any[], selectedMatchId: string, allPlayers
 export function MatchAnalytics() {
   const { state, createMatch } = useApp();
   const [selectedMatch, setSelectedMatch] = useState('');
-  const [activeTab, setActiveTab] = useState<'heatmaps'|'efficiency'|'kpis'|'timeline'|'insights'>('efficiency');
+  const [activeTab, setActiveTab] = useState<'heatmaps'|'efficiency'|'tactics'|'kpis'|'timeline'|'insights'>('efficiency');
+  const [attackBreakdownTab, setAttackBreakdownTab] = useState<'player' | 'zone' | 'type' | 'blockers'>('player');
   const [selectedFundament, setSelectedFundament] = useState('attacks');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -372,6 +382,34 @@ export function MatchAnalytics() {
   };
 
   const dynStats = useMemo(() => computeDynamicStats(state.matches, selectedMatch, state.players), [state.matches, selectedMatch, state.players]);
+
+  const playerLookup = useMemo(() => {
+    const map = new Map<string, any>();
+    state.players.forEach(p => map.set(p.id, p));
+    return map;
+  }, [state.players]);
+
+  const v2Stats = useMemo(() => {
+    if (!dynStats?.rallies) return null;
+    const rallies = dynStats.rallies;
+    const isV2 = rallies.some((r: any) => r.rotation !== undefined || r.phase !== undefined || r.servingTeam !== undefined);
+    const rotationStats = computeRotationStats(rallies);
+    const receptionStats = computeReceptionStats(rallies);
+    const attackStats = computeAttackStats(rallies);
+    const pointsOrigin = computePointsByOrigin(rallies);
+    const hasDetailedAttack = Object.values(attackStats.byBlockers).some(b => b.attempts > 0) ||
+      Object.values(attackStats.byType).some(t => t.attempts > 0) ||
+      Object.values(attackStats.byZone).some(z => z.attempts > 0);
+
+    return {
+      isV2,
+      rotationStats,
+      receptionStats,
+      attackStats,
+      pointsOrigin,
+      hasDetailedAttack
+    };
+  }, [dynStats?.rallies]);
 
   if (state.loading?.matches) {
     return (
@@ -461,12 +499,15 @@ export function MatchAnalytics() {
           </div>
 
           {/* Custom Tabs Navigation */}
-          <div className="flex gap-1 bg-[#0d0d0d] p-1 rounded-lg border border-white/[0.08] w-fit">
+          <div className="flex gap-1 bg-[#0d0d0d] p-1 rounded-lg border border-white/[0.08] w-fit flex-wrap">
             <button onClick={() => setActiveTab('heatmaps')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'heatmaps' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/40 hover:text-white'}`}>
               Resumen & Heatmaps
             </button>
             <button onClick={() => setActiveTab('efficiency')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'efficiency' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/40 hover:text-white'}`}>
               Análisis de Eficiencia
+            </button>
+            <button onClick={() => setActiveTab('tactics')} className={`flex items-center gap-1.5 px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'tactics' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/40 hover:text-white'}`}>
+              <RotateCw size={13} /> Táctica & Rotación
             </button>
             <button onClick={() => setActiveTab('kpis')} className={`px-4 py-2 text-[11px] uppercase font-mono tracking-wider rounded transition-colors ${activeTab === 'kpis' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/40 hover:text-white'}`}>
               KPIs Individuales
@@ -587,6 +628,486 @@ export function MatchAnalytics() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: TÁCTICA & ROTACIÓN (FASE 1) */}
+          {activeTab === 'tactics' && v2Stats && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {/* Header Context Banner */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <RotateCw size={15} className="text-[#A191FF]" />
+                    <h3 className="text-[14px] font-semibold text-white">Táctica de Partido y Rendimiento por Fase</h3>
+                  </div>
+                  <p className="text-[12px] text-white/50 mt-1">
+                    Eficacia en Side-Out (K1), Break Point (K2), rotaciones P1 a P6, control de recepción, distribución de ataque y origen de puntos.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-mono text-[10px] tracking-wider uppercase px-2.5 py-1 rounded border border-white/[0.08] bg-white/[0.03] text-white/70">
+                    Modo: {dynStats.match?.captureMode === 'completo' ? 'Completo' : 'Rápido'}
+                  </span>
+                  <span className="font-mono text-[10px] tracking-wider uppercase px-2.5 py-1 rounded border border-[#A191FF]/30 bg-[#A191FF]/10 text-[#A191FF]">
+                    {v2Stats.isV2 ? 'Tracking v2' : 'Tracking Legado'}
+                  </span>
+                </div>
+              </div>
+
+              {/* 1. SECCIÓN ROTACIONES P1 A P6 */}
+              <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-[13px] font-semibold text-white">1. Desempeño por Rotación (P1 a P6)</h4>
+                    <p className="text-[11px] text-white/40">Side-Out en recepción de saque rival (K1) vs Break Point en saque propio (K2)</p>
+                  </div>
+                  <span className="font-mono text-[10px] text-white/40 uppercase">6 Rotaciones</span>
+                </div>
+
+                {!v2Stats.isV2 ? (
+                  <div className="py-10 text-center border border-dashed border-white/[0.08] rounded-lg bg-white/[0.01]">
+                    <Info size={18} className="mx-auto text-white/30 mb-2" />
+                    <p className="text-[12px] text-white/50">Métricas de rotación disponibles en partidos registrados con v2.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[620px]">
+                      <thead>
+                        <tr className="border-b border-white/[0.08] bg-white/[0.02]">
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40">Rotación</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Side-Out % (K1)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Break Point % (K2)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Rallies K1 (Ganados/Tot)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Rallies K2 (Ganados/Tot)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Diferencial Pts</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/[0.06]">
+                        {([1, 2, 3, 4, 5, 6] as Rotation[]).map(rot => {
+                          const s = v2Stats.rotationStats[rot];
+                          return (
+                            <tr key={rot} className="hover:bg-white/[0.02] transition-colors">
+                              <td className="px-4 py-3 font-mono font-bold text-[13px]">
+                                <span className="px-2.5 py-1 rounded bg-[#A191FF]/10 text-[#A191FF] border border-[#A191FF]/30">
+                                  P{rot}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[13px]">
+                                <span className={s.sideOutPct >= 50 ? 'text-[#91FFB0] font-semibold' : 'text-white/70'}>
+                                  {s.sideOutPct}%
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[13px]">
+                                <span className={s.breakPointPct >= 40 ? 'text-[#91CAFF] font-semibold' : 'text-white/70'}>
+                                  {s.breakPointPct}%
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] text-white/60">
+                                {s.k1Wins} / {s.k1Rallies}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] text-white/60">
+                                {s.k2Wins} / {s.k2Rallies}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[13px] font-semibold">
+                                <span className={s.pointDiff > 0 ? 'text-[#91FFB0]' : s.pointDiff < 0 ? 'text-[#FF919F]' : 'text-white/40'}>
+                                  {s.pointDiff > 0 ? `+${s.pointDiff}` : s.pointDiff}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. SECCIÓN PUNTOS POR ORIGEN */}
+              <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-[13px] font-semibold text-white">2. Origen de los Puntos (Por Set)</h4>
+                    <p className="text-[11px] text-white/40">Puntos ganados por mérito propio vs regalados por errores del rival</p>
+                  </div>
+                </div>
+
+                {!v2Stats.pointsOrigin || v2Stats.pointsOrigin.length === 0 ? (
+                  <div className="py-8 text-center border border-dashed border-white/[0.08] rounded-lg bg-white/[0.01]">
+                    <p className="text-[12px] text-white/50">Sin registros de puntos por set.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[700px]">
+                      <thead>
+                        <tr className="border-b border-white/[0.08] bg-white/[0.02]">
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40">Set</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#91FFB0] text-center">Nosotros: Ganados</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#A191FF] text-center">Nosotros: Error Rival</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white font-bold text-center">Total Propios</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/60 text-center">Rival: Ganados</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FF919F] text-center">Rival: Error Nuestro</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white font-bold text-center">Total Rival</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Diferencial Errores</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/[0.06]">
+                        {v2Stats.pointsOrigin.map((setStat, idx) => {
+                          const isTotal = setStat.setNum === 'total';
+                          const errorDiff = setStat.regalado_rival - setStat.regalado_nuestro;
+                          return (
+                            <tr key={idx} className={isTotal ? 'bg-white/[0.04] font-semibold' : 'hover:bg-white/[0.02] transition-colors'}>
+                              <td className="px-4 py-3 font-mono text-[12px] text-white">
+                                {isTotal ? 'TOTAL' : `Set ${setStat.setNum}`}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] text-[#91FFB0]">
+                                {setStat.ganado}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] text-[#A191FF]">
+                                {setStat.regalado_rival}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[13px] font-bold text-white">
+                                {setStat.totalOurPoints}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] text-white/70">
+                                {setStat.perdido}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FF919F]">
+                                {setStat.regalado_nuestro}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[13px] font-bold text-white">
+                                {setStat.totalRivalPoints}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px]">
+                                <span className={errorDiff > 0 ? 'text-[#91FFB0]' : errorDiff < 0 ? 'text-[#FF919F]' : 'text-white/40'}>
+                                  {errorDiff > 0 ? `+${errorDiff}` : errorDiff}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. SECCIÓN RECEPCIÓN */}
+              <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-[13px] font-semibold text-white">3. Control y Calidad de Recepción (Escala 5 Niveles)</h4>
+                    <p className="text-[11px] text-white/40">Distribución de pases (#, +, !, -, =) y porcentaje de efectividad</p>
+                  </div>
+                </div>
+
+                {!v2Stats.receptionStats || v2Stats.receptionStats.length === 0 ? (
+                  <div className="py-8 text-center border border-dashed border-white/[0.08] rounded-lg bg-white/[0.01]">
+                    <p className="text-[12px] text-white/50">Sin acciones de recepción registradas en este partido.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[700px]">
+                      <thead>
+                        <tr className="border-b border-white/[0.08] bg-white/[0.02]">
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40">Jugadora</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Total</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#91FFB0] text-center"># (Perf)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#A191FF] text-center">+ (Pos)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white text-center">(+#)%</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FFD391] text-center">! (Reg)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/60 text-center">- (Mal)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FF919F] text-center">= (Ace rec)</th>
+                          <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#A191FF] text-center">Eficiencia %</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/[0.06]">
+                        {v2Stats.receptionStats.map(r => {
+                          const player = playerLookup.get(r.playerId);
+                          const displayName = player ? `#${player.number ?? ''} ${player.name}` : `ID: ${r.playerId.slice(0, 8)}`;
+                          const pos = player?.position || '';
+                          return (
+                            <tr key={r.playerId} className="hover:bg-white/[0.02] transition-colors">
+                              <td className="px-4 py-3">
+                                <p className="text-[13px] font-medium text-white">{displayName}</p>
+                                {pos && <p className="text-[10px] text-white/40">{pos}</p>}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] font-bold text-white">
+                                {r.total}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] text-[#91FFB0]">
+                                {r.perfect} <span className="text-[10px] text-white/40">({r.perfectPct}%)</span>
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] text-[#A191FF]">
+                                {r.positive}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] font-semibold text-white">
+                                {r.positivePct}%
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FFD391]">
+                                {r.neutral}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] text-white/60">
+                                {r.negative}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FF919F]">
+                                {r.error}
+                              </td>
+                              <td className="px-4 py-3 text-center font-mono text-[12px] font-bold">
+                                <span className={`px-2 py-0.5 rounded ${
+                                  r.efficiencyPct >= 35 ? 'bg-[#91FFB0]/10 text-[#91FFB0]' :
+                                  r.efficiencyPct >= 15 ? 'bg-[#FFD391]/10 text-[#FFD391]' :
+                                  'bg-[#FF919F]/10 text-[#FF919F]'
+                                }`}>
+                                  {r.efficiencyPct > 0 ? `+${r.efficiencyPct}` : r.efficiencyPct}%
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* 4. SECCIÓN ATAQUE */}
+              <div className="bg-[#0d0d0d] border border-white/[0.08] rounded-lg p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-[13px] font-semibold text-white">4. Eficacia y Desglose de Ataque</h4>
+                    <p className="text-[11px] text-white/40">Puntos, errores directos, bloqueos recibidos y porcentaje de eficacia</p>
+                  </div>
+
+                  {/* Subtabs for attack breakdown */}
+                  <div className="flex gap-1 bg-white/[0.04] p-1 rounded-md border border-white/[0.06] self-start sm:self-auto flex-wrap">
+                    <button
+                      onClick={() => setAttackBreakdownTab('player')}
+                      className={`px-3 py-1 text-[11px] font-mono uppercase rounded transition-colors ${
+                        attackBreakdownTab === 'player' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/50 hover:text-white'
+                      }`}>
+                      Por Jugadora
+                    </button>
+                    <button
+                      onClick={() => setAttackBreakdownTab('zone')}
+                      className={`px-3 py-1 text-[11px] font-mono uppercase rounded transition-colors ${
+                        attackBreakdownTab === 'zone' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/50 hover:text-white'
+                      }`}>
+                      Por Zona
+                    </button>
+                    <button
+                      onClick={() => setAttackBreakdownTab('type')}
+                      className={`px-3 py-1 text-[11px] font-mono uppercase rounded transition-colors ${
+                        attackBreakdownTab === 'type' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/50 hover:text-white'
+                      }`}>
+                      Por Tipo
+                    </button>
+                    <button
+                      onClick={() => setAttackBreakdownTab('blockers')}
+                      className={`px-3 py-1 text-[11px] font-mono uppercase rounded transition-colors ${
+                        attackBreakdownTab === 'blockers' ? 'bg-[#A191FF] text-black font-semibold' : 'text-white/50 hover:text-white'
+                      }`}>
+                      Por Bloqueadores
+                    </button>
+                  </div>
+                </div>
+
+                {!v2Stats.attackStats || v2Stats.attackStats.total.attempts === 0 ? (
+                  <div className="py-8 text-center border border-dashed border-white/[0.08] rounded-lg bg-white/[0.01]">
+                    <p className="text-[12px] text-white/50">Sin acciones de ataque registradas en este partido.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Summary KPIs */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      <div className="bg-white/[0.02] border border-white/[0.06] p-3 rounded text-center">
+                        <span className="block font-mono text-[10px] text-white/40 uppercase">Intentos</span>
+                        <span className="font-mono text-[18px] font-bold text-white">{v2Stats.attackStats.total.attempts}</span>
+                      </div>
+                      <div className="bg-white/[0.02] border border-white/[0.06] p-3 rounded text-center">
+                        <span className="block font-mono text-[10px] text-[#91FFB0] uppercase">Puntos (#)</span>
+                        <span className="font-mono text-[18px] font-bold text-[#91FFB0]">{v2Stats.attackStats.total.kills}</span>
+                      </div>
+                      <div className="bg-white/[0.02] border border-white/[0.06] p-3 rounded text-center">
+                        <span className="block font-mono text-[10px] text-[#FFD391] uppercase">Bloqueados</span>
+                        <span className="font-mono text-[18px] font-bold text-[#FFD391]">{v2Stats.attackStats.total.blocked}</span>
+                      </div>
+                      <div className="bg-white/[0.02] border border-white/[0.06] p-3 rounded text-center">
+                        <span className="block font-mono text-[10px] text-[#FF919F] uppercase">Errores (=)</span>
+                        <span className="font-mono text-[18px] font-bold text-[#FF919F]">{v2Stats.attackStats.total.errors}</span>
+                      </div>
+                      <div className="bg-white/[0.02] border border-white/[0.06] p-3 rounded text-center col-span-2 sm:col-span-1">
+                        <span className="block font-mono text-[10px] text-[#A191FF] uppercase">Eficacia %</span>
+                        <span className="font-mono text-[18px] font-bold text-[#A191FF]">{v2Stats.attackStats.total.efficiencyPct}%</span>
+                      </div>
+                    </div>
+
+                    {/* Subtab breakdown views */}
+                    {attackBreakdownTab === 'player' && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[620px]">
+                          <thead>
+                            <tr className="border-b border-white/[0.08] bg-white/[0.02]">
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40">Jugadora</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Intentos</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#91FFB0] text-center">Kills (#)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FFD391] text-center">Bloqueados</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FF919F] text-center">Errores (=)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#A191FF] text-center">Eficiencia %</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/[0.06]">
+                            {Object.entries(v2Stats.attackStats.byPlayer).map(([pId, s]) => {
+                              const player = playerLookup.get(pId);
+                              const displayName = player ? `#${player.number ?? ''} ${player.name}` : `ID: ${pId.slice(0, 8)}`;
+                              return (
+                                <tr key={pId} className="hover:bg-white/[0.02] transition-colors">
+                                  <td className="px-4 py-3">
+                                    <p className="text-[13px] font-medium text-white">{displayName}</p>
+                                    {player?.position && <p className="text-[10px] text-white/40">{player.position}</p>}
+                                  </td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-white font-bold">{s.attempts}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#91FFB0]">{s.kills}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FFD391]">{s.blocked}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FF919F]">{s.errors}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] font-semibold text-[#A191FF]">
+                                    {s.efficiencyPct > 0 ? `+${s.efficiencyPct}` : s.efficiencyPct}%
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {attackBreakdownTab !== 'player' && !v2Stats.hasDetailedAttack && (
+                      <div className="py-8 text-center border border-dashed border-white/[0.08] rounded-lg bg-white/[0.01]">
+                        <Info size={16} className="mx-auto text-white/30 mb-2" />
+                        <p className="text-[12px] text-white/50">
+                          Detalles avanzados de ataque ({attackBreakdownTab === 'zone' ? 'zonas' : attackBreakdownTab === 'type' ? 'tipos' : 'bloqueadores'}) disponibles en partidos registrados en modo Completo.
+                        </p>
+                      </div>
+                    )}
+
+                    {attackBreakdownTab === 'zone' && v2Stats.hasDetailedAttack && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[500px]">
+                          <thead>
+                            <tr className="border-b border-white/[0.08] bg-white/[0.02]">
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40">Zona de Red / Zaga</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Intentos</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#91FFB0] text-center">Kills (#)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FFD391] text-center">Bloqueados</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FF919F] text-center">Errores (=)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#A191FF] text-center">Eficiencia %</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/[0.06]">
+                            {([4, 3, 2, 1, 6, 5] as AttackZone[]).map(z => {
+                              const s = v2Stats.attackStats.byZone[z];
+                              const label = z === 4 ? 'Zona 4 (Punta / Ala Izq)' :
+                                            z === 3 ? 'Zona 3 (Central)' :
+                                            z === 2 ? 'Zona 2 (Opuesto / Ala Der)' :
+                                            z === 1 ? 'Zona 1 (Zaga Der)' :
+                                            z === 6 ? 'Zona 6 (Pipe / Fondo Centro)' :
+                                            'Zona 5 (Zaga Izq)';
+                              return (
+                                <tr key={z} className="hover:bg-white/[0.02] transition-colors">
+                                  <td className="px-4 py-3 font-medium text-[13px] text-white">
+                                    <span className="font-mono text-[#A191FF] mr-2">Z{z}</span> {label}
+                                  </td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-white font-bold">{s.attempts}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#91FFB0]">{s.kills}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FFD391]">{s.blocked}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FF919F]">{s.errors}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] font-semibold text-[#A191FF]">
+                                    {s.efficiencyPct > 0 ? `+${s.efficiencyPct}` : s.efficiencyPct}%
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {attackBreakdownTab === 'type' && v2Stats.hasDetailedAttack && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[500px]">
+                          <thead>
+                            <tr className="border-b border-white/[0.08] bg-white/[0.02]">
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40">Tipo de Balón</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Intentos</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#91FFB0] text-center">Kills (#)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FFD391] text-center">Bloqueados</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FF919F] text-center">Errores (=)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#A191FF] text-center">Eficiencia %</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/[0.06]">
+                            {(['alta', 'rapida', 'media', 'pipe', 'segunda'] as AttackType[]).map(t => {
+                              const s = v2Stats.attackStats.byType[t];
+                              const label = t === 'alta' ? 'Balón Alto' :
+                                            t === 'rapida' ? 'Balón Rápido / Primer Tiempo' :
+                                            t === 'media' ? 'Balón Medio' :
+                                            t === 'pipe' ? 'Ataque Pipe (Zaga Centro)' :
+                                            'Segunda Intención (Colocador)';
+                              return (
+                                <tr key={t} className="hover:bg-white/[0.02] transition-colors">
+                                  <td className="px-4 py-3 font-medium text-[13px] text-white capitalize">{label}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-white font-bold">{s.attempts}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#91FFB0]">{s.kills}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FFD391]">{s.blocked}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FF919F]">{s.errors}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] font-semibold text-[#A191FF]">
+                                    {s.efficiencyPct > 0 ? `+${s.efficiencyPct}` : s.efficiencyPct}%
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {attackBreakdownTab === 'blockers' && v2Stats.hasDetailedAttack && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[500px]">
+                          <thead>
+                            <tr className="border-b border-white/[0.08] bg-white/[0.02]">
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40">Bloqueadores Rivales</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-white/40 text-center">Intentos</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#91FFB0] text-center">Kills (#)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FFD391] text-center">Bloqueados</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#FF919F] text-center">Errores (=)</th>
+                              <th className="px-4 py-2.5 text-[10px] uppercase font-mono tracking-wider text-[#A191FF] text-center">Eficiencia %</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/[0.06]">
+                            {([0, 1, 2, 3] as const).map(b => {
+                              const s = v2Stats.attackStats.byBlockers[b];
+                              const label = b === 0 ? 'Sin Bloqueo' : b === 1 ? '1 Bloqueador' : b === 2 ? '2 Bloqueadores (Doble)' : '3 Bloqueadores (Triple)';
+                              return (
+                                <tr key={b} className="hover:bg-white/[0.02] transition-colors">
+                                  <td className="px-4 py-3 font-medium text-[13px] text-white">{label}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-white font-bold">{s.attempts}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#91FFB0]">{s.kills}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FFD391]">{s.blocked}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] text-[#FF919F]">{s.errors}</td>
+                                  <td className="px-4 py-3 text-center font-mono text-[12px] font-semibold text-[#A191FF]">
+                                    {s.efficiencyPct > 0 ? `+${s.efficiencyPct}` : s.efficiencyPct}%
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

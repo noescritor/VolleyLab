@@ -279,3 +279,229 @@ export const QUALITY_LABELS: Record<Gesture, Record<Quality, string>> = {
     '=': 'Error'
   }
 };
+
+/**
+ * Estadísticas de recepción por jugadora
+ */
+export interface PlayerReceptionStat {
+  playerId: string;
+  total: number;
+  perfect: number; // #
+  positive: number; // +
+  neutral: number; // !
+  negative: number; // -
+  error: number; // =
+  perfectPct: number; // # / total * 100
+  positivePct: number; // (# + +) / total * 100
+  efficiencyPct: number; // ((# + +) - (-) - (=)) / total * 100
+}
+
+export function computeReceptionStats(rallies: Rally[]): PlayerReceptionStat[] {
+  const map: Record<string, { total: number; perfect: number; positive: number; neutral: number; negative: number; error: number }> = {};
+
+  rallies.forEach(rally => {
+    (rally.actions || []).forEach(action => {
+      const g = String(action.gesture).toLowerCase();
+      if (action.team === 'our' && (g === 'recepcion' || g === 'recepción') && action.playerId) {
+        if (!map[action.playerId]) {
+          map[action.playerId] = { total: 0, perfect: 0, positive: 0, neutral: 0, negative: 0, error: 0 };
+        }
+        const s = map[action.playerId];
+        s.total++;
+        const q = normalizeQuality(action.quality);
+        if (q === '#') s.perfect++;
+        else if (q === '+') s.positive++;
+        else if (q === '!') s.neutral++;
+        else if (q === '-') s.negative++;
+        else if (q === '=') s.error++;
+      }
+    });
+  });
+
+  return Object.entries(map).map(([playerId, s]) => {
+    const perfectPct = s.total > 0 ? Math.round((s.perfect / s.total) * 100) : 0;
+    const positivePct = s.total > 0 ? Math.round(((s.perfect + s.positive) / s.total) * 100) : 0;
+    const efficiencyPct = s.total > 0 ? Math.round(((s.perfect + s.positive - s.negative - s.error) / s.total) * 100) : 0;
+    return {
+      playerId,
+      ...s,
+      perfectPct,
+      positivePct,
+      efficiencyPct
+    };
+  }).sort((a, b) => b.total - a.total);
+}
+
+/**
+ * Estadísticas de ataque por jugador, zona, tipo y bloqueadores
+ */
+export interface AttackItemStat {
+  attempts: number;
+  kills: number; // #
+  errors: number; // = (no bloqueado)
+  blocked: number; // = (bloqueado)
+  efficiencyPct: number; // (kills - errors - blocked) / attempts * 100
+}
+
+export interface AttackStatSummary {
+  byPlayer: Record<string, AttackItemStat>;
+  byZone: Record<AttackZone, AttackItemStat>;
+  byType: Record<AttackType, AttackItemStat>;
+  byBlockers: Record<0 | 1 | 2 | 3, AttackItemStat>;
+  total: AttackItemStat;
+}
+
+export function computeAttackStats(rallies: Rally[]): AttackStatSummary {
+  const createItem = (): AttackItemStat => ({ attempts: 0, kills: 0, errors: 0, blocked: 0, efficiencyPct: 0 });
+
+  const summary: AttackStatSummary = {
+    byPlayer: {},
+    byZone: {
+      1: createItem(),
+      2: createItem(),
+      3: createItem(),
+      4: createItem(),
+      5: createItem(),
+      6: createItem()
+    },
+    byType: {
+      alta: createItem(),
+      rapida: createItem(),
+      media: createItem(),
+      pipe: createItem(),
+      segunda: createItem()
+    },
+    byBlockers: {
+      0: createItem(),
+      1: createItem(),
+      2: createItem(),
+      3: createItem()
+    },
+    total: createItem()
+  };
+
+  const updateItem = (item: AttackItemStat, q: Quality, isBlocked: boolean) => {
+    item.attempts++;
+    if (q === '#') item.kills++;
+    else if (q === '=') {
+      if (isBlocked) item.blocked++;
+      else item.errors++;
+    }
+    item.efficiencyPct = item.attempts > 0
+      ? Math.round(((item.kills - item.errors - item.blocked) / item.attempts) * 100)
+      : 0;
+  };
+
+  rallies.forEach(rally => {
+    (rally.actions || []).forEach(action => {
+      const g = String(action.gesture).toLowerCase();
+      if (action.team === 'our' && (g === 'ataque' || g === 'dejada')) {
+        const q = normalizeQuality(action.quality);
+        const isBlocked = action.detail?.errorType === 'bloqueado' || (action as any).errorDetail === 'Bloqueado';
+
+        updateItem(summary.total, q, isBlocked);
+
+        if (action.playerId) {
+          if (!summary.byPlayer[action.playerId]) summary.byPlayer[action.playerId] = createItem();
+          updateItem(summary.byPlayer[action.playerId], q, isBlocked);
+        }
+
+        if (action.detail?.attackZone && summary.byZone[action.detail.attackZone]) {
+          updateItem(summary.byZone[action.detail.attackZone], q, isBlocked);
+        }
+
+        if (action.detail?.attackType && summary.byType[action.detail.attackType]) {
+          updateItem(summary.byType[action.detail.attackType], q, isBlocked);
+        }
+
+        if (action.detail?.blockers !== undefined && summary.byBlockers[action.detail.blockers]) {
+          updateItem(summary.byBlockers[action.detail.blockers], q, isBlocked);
+        }
+      }
+    });
+  });
+
+  return summary;
+}
+
+/**
+ * Puntos por origen (ganados / regalados rival / perdidos / regalados nosotros) por set y total
+ */
+export interface SetPointsOrigin {
+  setNum: number | 'total';
+  ganado: number;
+  regalado_rival: number;
+  totalOurPoints: number;
+  perdido: number;
+  regalado_nuestro: number;
+  totalRivalPoints: number;
+}
+
+export function computePointsByOrigin(rallies: Rally[]): SetPointsOrigin[] {
+  const bySet: Record<number, SetPointsOrigin> = {};
+  const total: SetPointsOrigin = {
+    setNum: 'total',
+    ganado: 0,
+    regalado_rival: 0,
+    totalOurPoints: 0,
+    perdido: 0,
+    regalado_nuestro: 0,
+    totalRivalPoints: 0
+  };
+
+  rallies.forEach(rally => {
+    const setNum = rally.setNum || 1;
+    if (!bySet[setNum]) {
+      bySet[setNum] = {
+        setNum,
+        ganado: 0,
+        regalado_rival: 0,
+        totalOurPoints: 0,
+        perdido: 0,
+        regalado_nuestro: 0,
+        totalRivalPoints: 0
+      };
+    }
+    const s = bySet[setNum];
+
+    let pt = rally.pointType;
+    if (!pt) {
+      if (rally.winner === 'our') {
+        const lastAction = rally.actions?.[rally.actions.length - 1];
+        pt = lastAction?.team === 'rival' ? 'regalado_rival' : 'ganado';
+      } else {
+        const lastAction = rally.actions?.[rally.actions.length - 1];
+        pt = lastAction?.team === 'our' ? 'regalado_nuestro' : 'perdido';
+      }
+    }
+
+    if (rally.winner === 'our') {
+      if (pt === 'ganado') {
+        s.ganado++;
+        total.ganado++;
+      } else {
+        s.regalado_rival++;
+        total.regalado_rival++;
+      }
+      s.totalOurPoints++;
+      total.totalOurPoints++;
+    } else {
+      if (pt === 'perdido') {
+        s.perdido++;
+        total.perdido++;
+      } else {
+        s.regalado_nuestro++;
+        total.regalado_nuestro++;
+      }
+      s.totalRivalPoints++;
+      total.totalRivalPoints++;
+    }
+  });
+
+  const sortedSets = Object.keys(bySet)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map(setNum => bySet[setNum]);
+
+  return [...sortedSets, total];
+}
