@@ -3,11 +3,8 @@
 -- Inserta en global_players y club_roster atómicamente validando membresía
 -- ============================================================================
 
--- 1. Política INSERT en global_players para usuarios autenticados si se requiere inserción directa
+-- 1. Nadie puede insertar directo en global_players (se usa el RPC SECURITY DEFINER)
 DROP POLICY IF EXISTS "Usuarios autenticados pueden insertar jugadores ghost" ON public.global_players;
-CREATE POLICY "Usuarios autenticados pueden insertar jugadores ghost" ON public.global_players
-  FOR INSERT
-  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- 2. Función RPC SECURITY DEFINER para crear el jugador ghost y agregarlo al roster en una sola transacción
 CREATE OR REPLACE FUNCTION public.create_ghost_player(

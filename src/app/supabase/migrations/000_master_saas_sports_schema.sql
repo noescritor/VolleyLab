@@ -238,9 +238,6 @@ CREATE POLICY "Miembros del club pueden editar jugadores ghost de su roster" ON 
     )
   );
 
-CREATE POLICY "Usuarios autenticados pueden insertar jugadores ghost" ON public.global_players
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-
 -- RPC para buscar jugador por global_athlete_id exacto (devuelve solo id y name)
 CREATE OR REPLACE FUNCTION public.find_player_by_athlete_id(target_athlete_id text)
 RETURNS TABLE(id uuid, name text)
